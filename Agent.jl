@@ -11,7 +11,7 @@ function update_opinion()
 end
 
 function update_inclin_interact()
-    # if 0.1 * abs(own_opinion - perceiv_publ_opinion) + 0.9 * own_inclin_interact  
+    # 0.1 * abs(own_opinion - perceiv_publ_opinion) + 0.9 * own_inclin_interact  
 end
 
 function like()
