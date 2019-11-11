@@ -1,6 +1,6 @@
 mutable struct Tweet
     opinion::AbstractFloat
-    weight::Integer
+    weight::AbstractFloat
     like_count::Integer
     comment_count::Integer
     retweet_count::Integer
