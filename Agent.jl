@@ -57,25 +57,35 @@ end
 
 # Patrick
 function drop_worst_input(g::AbstractGraph, v::Integer)
-    currentfriends = inneighbors(g,v)
-    for friend in currentfriends
-        if abs(v.opinion - friend.opinion) > 0.5
-            rem_edge!(g,friend, v)
+
+    # Look for current input sources that have too different opinion compared to own
+    # and remove them
+    for input in inneighbors(g,v)
+        if abs(v.opinion - input.opinion) > 0.5
+            rem_edge!(g, input, v)
         end
     end
 end
 
 # Patrick
 function add_input(g::AbstractGraph, v::Integer)
+
     # Create list of possible new friends
-    newfriends = setdiff([1:v-1;v+1:nv(network)],neighbors(network,v))
+    inputcandidates = setdiff([1:v-1;v+1:nv(g)],neighbors(g,v))
 
-    # How many friends should be added?        
-
-    for friend in newfriends
-        if abs(v.opinion - friend.opinion) < 0.5
-            add_edge!(g, friend, v)
+    # Reject all candidates that are not similar enough in opinion
+    for i, friend in enumerate(inputcandidates)
+        if abs(v.opinion - friend.opinion > 0.5)
+            pop!(inputcandidates,i)
         end
+    end
+
+    # Choose IDs of new inputs randomly. Currently fixed to 4 new inputs per tick
+    newinputids = rand(1:length(inputcandidates),4)
+
+    # Add incoming edges from new inputs
+    for i in newinputids
+        add_edge!(g,newinputids[i],v)
     end
 
 end
