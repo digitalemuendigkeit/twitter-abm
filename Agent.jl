@@ -29,12 +29,12 @@ function update_perceiv_publ_opinion(g::AbstractGraph, v::Integer, a::AbstractAr
     else
         following_opinion_mean = a[v].opinion
     end
-    # compute timeline opinion 
+    # compute timeline opinion
     timeline_opinions = [t.opinion for t in a[v].timeline]
     timeline_weights = [t.weight for t in a[v].timeline]
-    if length(timeline_opinions) > 0 
+    if length(timeline_opinions) > 0
         timeline_opinion_mean = (
-            sum([a * b for (a, b) in zip(timeline_opinions, timeline_weights)]) / 
+            sum([a * b for (a, b) in zip(timeline_opinions, timeline_weights)]) /
             sum(timeline_weights)
         )
     else
@@ -49,15 +49,17 @@ function update_opinion()
 end
 
 function update_inclin_interact()
-    # 0.1 * abs(own_opinion - perceiv_publ_opinion) + 0.9 * own_inclin_interact  
+    # 0.1 * abs(own_opinion - perceiv_publ_opinion) + 0.9 * own_inclin_interact
 end
 
 function like()
 end
 
+# Patrick
 function drop_worst_input()
 end
 
+# Patrick
 function add_input()
 end
 
@@ -69,6 +71,3 @@ end
 
 # suppress output of include()
 ;
-
-
-
