@@ -64,6 +64,9 @@ end
 function publish_tweet()
 end
 
+function update_timeline()
+end
+
 # suppress output of include()
 ;
 
