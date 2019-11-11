@@ -27,7 +27,6 @@ function create_agents(g::AbstractGraph)
     end
     return agent_list
 end
-
 # simulation step
 function tick!(agent_list::AbstractArray, g::AbstractGraph)
     for idx in shuffle(1:length(agent_list))
@@ -35,8 +34,8 @@ function tick!(agent_list::AbstractArray, g::AbstractGraph)
         update_opinion!(agent_list, idx)
         update_inclin_interact!(agent_list, idx)
         # like()
-        # drop_worst_input()
-        # add_input()
+        drop_worst_input(g,idx)
+        add_input(g,idx)
         if rand() < agent_list[idx].inclin_interact
             publish_tweet!(agent_list, g, idx)
         end

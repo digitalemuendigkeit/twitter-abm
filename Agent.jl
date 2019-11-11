@@ -67,8 +67,6 @@ end
 # Patrick
 function drop_worst_input(g::AbstractGraph, v::Integer, opThreshold=0.5)
 
-    println("OpThreshold is $opThreshold.")
-
     # Look for current input sources that have too different opinion compared to own
     # and remove them
 
@@ -79,29 +77,14 @@ function drop_worst_input(g::AbstractGraph, v::Integer, opThreshold=0.5)
     checkinput = deepcopy(inneighbors(g,v))
     while (length(checkinput) > 0)
 
-        println("Opinion difference between $v and " * string(checkinput[1]) *" is " * string(a[v].opinion - a[checkinput[1]].opinion))
+        # println("Opinion difference between $v and " * string(checkinput[1]) *" is " * string(a[v].opinion - a[checkinput[1]].opinion))
         if abs(a[v].opinion - a[checkinput[1]].opinion) > opThreshold
             rem_edge!(g, checkinput[1], v)
-            println("Edge " * string(checkinput[1]) * " => $v removed")
+            # println("Edge " * string(checkinput[1]) * " => $v removed")
         end
 
         popfirst!(checkinput)
     end
-
-    # Möglichkeit 2: Neues Array anlegen und zwei Schleifen durchlaufen
-    # newenemies = Integer[]
-    # for input in inneighbors(g,v)
-    #     if abs(a[v].opinion - a[input].opinion) > 0.1
-    #         push!(newenemies,input)
-    #     end
-    # end
-    #
-    # # println("new enemies are $newenemies")
-    #
-    # for i in newenemies
-    #     rem_edge!(g,i,v)
-    # end
-
 
 end
 
@@ -136,7 +119,7 @@ function add_input(g::AbstractGraph, v::Integer, newinputcount=4)
     # If there are not enough new fitting inputs, adapt the selection process.
     shuffle!(inputcandidates)
     # println("Shuffled Survivers are $inputcandidates")
-    if length(inputcandidates) < 4
+    if length(inputcandidates) < newinputcount
         newinputcount = length(inputcandidates)
     end
 
