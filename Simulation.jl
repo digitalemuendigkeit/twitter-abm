@@ -28,20 +28,30 @@ function create_agents(g::AbstractGraph)
     return agent_list
 end
 
-function tick()
-    # update_perceiv_publ_opinion()
-    # update_opinion()
-    # update_inclin_interact()
-    # like()
-    # drop_worst_input()
-    # add_input()
-    # publish_tweet()
+# simulation step
+function tick!(agent_list::AbstractArray, g::AbstractGraph)
+    for idx in shuffle(1:length(agent_list))
+        update_perceiv_publ_opinion!(g, idx, agent_list)
+        update_opinion!(agent_list, idx)
+        update_inclin_interact!(agent_list, idx)
+        # like()
+        # drop_worst_input()
+        # add_input()
+        if rand() < agent_list[idx].inclin_interact
+            publish_tweet!(agent_list, g, idx)
+        end
+        update_timeline!(agent_list, idx)
+    end
 end
 
-function simulate(n_iter)
-    # for n in 1:n_iter
-    #     tick()
-    # end
+# the actual simulation
+function simulate(g::AbstractGraph, agent_list::AbstractArray, n_iter::Integer)
+    agent_list = deepcopy(agent_list)
+    g = deepcopy(g)
+    for n in 1:n_iter
+        tick!(agent_list, g)
+    end
+    return g, agent_list
 end
 
 # suppress output of include()
