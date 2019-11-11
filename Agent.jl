@@ -56,11 +56,28 @@ function like()
 end
 
 # Patrick
-function drop_worst_input()
+function drop_worst_input(g::AbstractGraph, v::Integer)
+    currentfriends = inneighbors(g,v)
+    for friend in currentfriends
+        if abs(v.opinion - friend.opinion) > 0.5
+            rem_edge!(g,friend, v)
+        end
+    end
 end
 
 # Patrick
-function add_input()
+function add_input(g::AbstractGraph, v::Integer)
+    # Create list of possible new friends
+    newfriends = setdiff([1:v-1;v+1:nv(network)],neighbors(network,v))
+
+    # How many friends should be added?        
+
+    for friend in newfriends
+        if abs(v.opinion - friend.opinion) < 0.5
+            add_edge!(g, friend, v)
+        end
+    end
+
 end
 
 function publish_tweet()
