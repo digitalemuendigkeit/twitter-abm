@@ -62,6 +62,7 @@ function add_input()
 end
 
 function publish_tweet()
+    # functionality for tweeting
 end
 
 function update_timeline()
