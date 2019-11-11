@@ -64,10 +64,91 @@ end
 function like()
 end
 
-function drop_worst_input()
+# Patrick
+function drop_worst_input(g::AbstractGraph, v::Integer, opThreshold=0.5)
+
+    println("OpThreshold is $opThreshold.")
+
+    # Look for current input sources that have too different opinion compared to own
+    # and remove them
+
+    #println("Current agent is $v. Opinion is " * string(a[v].opinion))
+    #println("Waiting inneighbors in list:" * string(inneighbors(g,v)))
+
+    # Möglichkeit 1: Deepcopy der Inneighbors, nur eine Schleife erforderlich
+    checkinput = deepcopy(inneighbors(g,v))
+    while (length(checkinput) > 0)
+
+        println("Opinion difference between $v and " * string(checkinput[1]) *" is " * string(a[v].opinion - a[checkinput[1]].opinion))
+        if abs(a[v].opinion - a[checkinput[1]].opinion) > opThreshold
+            rem_edge!(g, checkinput[1], v)
+            println("Edge " * string(checkinput[1]) * " => $v removed")
+        end
+
+        popfirst!(checkinput)
+    end
+
+    # Möglichkeit 2: Neues Array anlegen und zwei Schleifen durchlaufen
+    # newenemies = Integer[]
+    # for input in inneighbors(g,v)
+    #     if abs(a[v].opinion - a[input].opinion) > 0.1
+    #         push!(newenemies,input)
+    #     end
+    # end
+    #
+    # # println("new enemies are $newenemies")
+    #
+    # for i in newenemies
+    #     rem_edge!(g,i,v)
+    # end
+
+
 end
 
-function add_input()
+# Patrick
+function add_input(g::AbstractGraph, v::Integer, newinputcount=4)
+
+    if rand(1:10) > 2
+        # In most cases, new friends are recommended out of friends of friends.
+        # Opinion difference is not considered here.
+        inputcandidates = Integer[]
+        for neighbor in inneighbors(g,v)
+            # Avoid duplicates in newcandidates through setdiff
+            append!(inputcandidates,setdiff(inneighbors(g,neighbor),inputcandidates))
+        end
+
+    else
+        # In rare cases, an agent adds new friends with very similar opinion.
+        # Possible explanation: Add a "real-world" friend
+        notneighbors = setdiff([1:v-1;v+1:nv(g)],inneighbors(g,v))
+
+        inputcandidates = Integer[]
+        for candidate in notneighbors
+            if abs(a[v].opinion - a[candidate].opinion) < 0.2
+                push!(inputcandidates,candidate)
+            end
+        end
+    end
+
+    # println("New inputcandidates are $inputcandidates.")
+
+    # Choose IDs of new inputs randomly. Currently fixed to 4 new inputs per tick.
+    # If there are not enough new fitting inputs, adapt the selection process.
+    shuffle!(inputcandidates)
+    # println("Shuffled Survivers are $inputcandidates")
+    if length(inputcandidates) < 4
+        newinputcount = length(inputcandidates)
+    end
+
+    # println("Chosen IDs are " * string(inputcandidates[1:newinputcount]))
+
+    # Add incoming edges from new inputs
+    for i in 1:newinputcount
+        # println("Opinion difference is " * string(abs(a[inputcandidates[i]].opinion - a[v].opinion)))
+        add_edge!(g,inputcandidates[i],v)
+        # println("Edge" * string(inputcandidates[i]) * " => $v added.")
+    end
+
 end
 
 function publish_tweet!(agent_list::AbstractArray, g::AbstractGraph, index::Integer)
