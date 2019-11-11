@@ -16,5 +16,5 @@ Agents have the following functions:
 - **update_timeline():** Weights of the tweets in the agent's timeline are lowered over time so that currency of a tweet plays a role for its weight
 - **publish_tweet()**: With considering the inclination to interact, an agent publishes new tweets and sends them to all inneighbors. If the timeline of an inneighbor is not full yet, tweet is automatically published in it. Otherwise weight of tweet is compared to weight of all other tweets in timeline and the tweet with the lowest weight is dropped (weights of existing tweets in timeline decay over time, see function update_timeline())
 - **like()**: Agents can interact with the tweets in their timeline by liking them. Like_count of a tweet in turn increases its weight.
-- **drop_worst_input()**: Removing the ingoing edge to neighbors that are over accepted opinion threshold
-- **add_input**: Adding ingoing edges randomly to other agents, following preferential attachment?
+- **drop_worst_input()**: Removing the ingoing edge to all neighbors that are over accepted opinion threshold.
+- **add_input**: Adding new ingoing edges from agents. 2 different methods for addition: Either by "Recommendation System" that recommends random friends of friends as new input regardless of opinion difference, or randomly selecting new agents out of the whole network who hold a very similar opinion (comparable to adding real-world friends)
