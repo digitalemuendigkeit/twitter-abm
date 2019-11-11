@@ -86,7 +86,7 @@ function publish_tweet!(agent_list::AbstractArray, g::AbstractGraph, index::Inte
     end
 end
 
-function update_timeline!(agent_list::AbstractArray, index::Integer, decay_factor::AbstractFloat)
+function update_timeline!(agent_list::AbstractArray, index::Integer, decay_factor::AbstractFloat=0.5)
     for t in agent_list[index].timeline
         t.weight = decay_factor * t.weight
     end

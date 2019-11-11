@@ -15,12 +15,10 @@ push!(a[1].timeline, Tweet(0.5, 0))
 push!(a[1].timeline, Tweet(0.3, 17))
 
 publish_tweet!(a, g, 4)
-
 update_timeline!(a, 1, 0.5)
 
 
+g = create_network(100, 3, 1)
+a = create_agents(g)
 
-
-push!(a[1].timeline, Tweet(0.5, 14))
-push!(a[1].timeline, Tweet(0.3, 17))
-push!(a[1].timeline, Tweet(0.5, 23))
+h, b = simulate(g, a, 100);
