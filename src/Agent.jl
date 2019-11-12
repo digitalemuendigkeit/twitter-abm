@@ -85,7 +85,16 @@ function drop_worst_input(g::AbstractGraph, v::Integer, agent_list::AbstractArra
 
 end
 
-# Patrick
+export add_input
+
+"""
+    add_input(g::AbstractGraph, v::Integer, agent_list::AbstractArray, new_input_count=4)
+
+Adds new ingoing edges to an agent.
+Two approaches:
+1) In 80% of function calls neighbors of the current neighbors are selected as new candidates.
+2) In 20% of function calls agent chooses randomly from whole network, but with regard to opinion similarity.
+"""
 function add_input(g::AbstractGraph, v::Integer, agent_list::AbstractArray, new_input_count=4)
 
     if rand(1:10) > 2
@@ -145,7 +154,7 @@ function publish_tweet!(agent_list::AbstractArray, g::AbstractGraph, agent::Inte
     # send tweet to each outneighbor
     for v in outneighbors(g, agent)
         push!(agent_list[v].timeline, t)
-        if length(agent_list[v].timeline) > 10 
+        if length(agent_list[v].timeline) > 10
             min_weight = minimum([t.weight for t in agent_list[v].timeline])
             del_idx = findfirst([t.weight == min_weight for t in agent_list[v].timeline])
             deleteat!(agent_list[v].timeline, del_idx)
