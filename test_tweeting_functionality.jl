@@ -24,12 +24,15 @@ update_timeline!(a, 1, 0.5)
 g = create_network(100, 3, 1)
 a = create_agents(g)
 
-h, b = simulate(g, a, 100);
+@time h, b = simulate(g, a, 100);
 
 for i in 1:length(b)
     print(b[i].timeline, "\n")
 end
 
+@time drop_worst_input(g, 3, a)
+
 ii = [ag.inclin_interact for ag in b]
 
 maximum(ii)
+

@@ -17,7 +17,7 @@ function create_network(n::Int64, m0::Int64, seed::Int64=0)
         source = m0 + 1
         # preferential attachment algorithm
         while source <= n
-            for e in zip(fill(source, m0), targets)
+            for e in zip(targets, fill(source, m0))
                 add_edge!(g, e[1], e[2])
             end
             append!(repeated_nodes, targets)

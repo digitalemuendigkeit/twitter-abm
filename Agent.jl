@@ -1,7 +1,6 @@
 using Statistics
 using LightGraphs
 
-# agent class
 mutable struct Agent
     opinion::AbstractFloat
     inclin_interact::AbstractFloat
@@ -20,7 +19,6 @@ mutable struct Agent
     end
 end
 
-# compute the perceived public opinion of an agent
 function update_perceiv_publ_opinion!(g::AbstractGraph, v::Integer, a::AbstractArray)
     # get neighborhood opinion as baseline
     following = outneighbors(g, v)
@@ -65,84 +63,89 @@ function like()
 end
 
 # Patrick
-function drop_worst_input(g::AbstractGraph, v::Integer, agent_list::AbstractArray, opThreshold=0.5)
+function drop_worst_input(g::AbstractGraph, v::Integer, agent_list::AbstractArray, opinion_thresh=0.5)
 
-    # Look for current input sources that have too different opinion compared to own
+    # look for current input sources that have too different opinion compared to own
     # and remove them
 
     #println("Current agent is $v. Opinion is " * string(a[v].opinion))
     #println("Waiting inneighbors in list:" * string(inneighbors(g,v)))
 
-    checkinput = deepcopy(inneighbors(g,v))
-    while (length(checkinput) > 0)
+    check_input = deepcopy(inneighbors(g, v))
+    while (length(check_input) > 0)
 
         # println("Opinion difference between $v and " * string(checkinput[1]) *" is " * string(a[v].opinion - a[checkinput[1]].opinion))
-        if abs(agent_list[v].opinion - agent_list[checkinput[1]].opinion) > opThreshold
-            rem_edge!(g, checkinput[1], v)
+        if abs(agent_list[v].opinion - agent_list[check_input[1]].opinion) > opinion_thresh
+            rem_edge!(g, check_input[1], v)
             # println("Edge " * string(checkinput[1]) * " => $v removed")
         end
 
-        popfirst!(checkinput)
+        popfirst!(check_input)
     end
 
 end
 
 # Patrick
-function add_input(g::AbstractGraph, v::Integer, agent_list::AbstractArray, newinputcount=4)
+function add_input(g::AbstractGraph, v::Integer, agent_list::AbstractArray, new_input_count=4)
 
     if rand(1:10) > 2
-        # In most cases, new friends are recommended out of friends of friends.
-        # Opinion difference is not considered here.
-        inputcandidates = Integer[]
-        for neighbor in inneighbors(g,v)
-            # Avoid duplicates in newcandidates through setdiff
-            append!(inputcandidates,setdiff(inneighbors(g,neighbor),inputcandidates))
+        # in most cases, new friends are recommended out of friends of friends
+        # opinion difference is not considered here
+        input_candidates = Integer[]
+        for neighbor in inneighbors(g, v)
+            # avoid duplicates in newcandidates through setdiff
+            append!(input_candidates, setdiff(inneighbors(g, neighbor), input_candidates))
         end
 
     else
-        # In rare cases, an agent adds new friends with very similar opinion.
-        # Possible explanation: Add a "real-world" friend
-        notneighbors = setdiff([1:v-1;v+1:nv(g)],inneighbors(g,v))
+        # in rare cases, an agent adds new friends with very similar opinion
+        # possible explanation: add a "real-world" friend
+        not_neighbors = setdiff([1:(v - 1); (v + 1):nv(g)], inneighbors(g, v))
 
-        inputcandidates = Integer[]
-        for candidate in notneighbors
+        input_candidates = Integer[]
+        for candidate in not_neighbors
             if abs(agent_list[v].opinion - agent_list[candidate].opinion) < 0.2
-                push!(inputcandidates,candidate)
+                push!(input_candidates, candidate)
             end
         end
     end
 
-    # println("New inputcandidates are $inputcandidates.")
+    # println("New input_candidates are $input_candidates.")
 
-    # Choose IDs of new inputs randomly. Currently fixed to 4 new inputs per tick.
-    # If there are not enough new fitting inputs, adapt the selection process.
-    shuffle!(inputcandidates)
+    # choose IDs of new inputs randomly; currently fixed to 4 new inputs per tick
+    # if there are not enough new fitting inputs, adapt the selection process
+    shuffle!(input_candidates)
     # println("Shuffled Survivers are $inputcandidates")
-    if length(inputcandidates) < newinputcount
-        newinputcount = length(inputcandidates)
+    if length(input_candidates) < new_input_count
+        new_input_count = length(input_candidates)
     end
 
     # println("Chosen IDs are " * string(inputcandidates[1:newinputcount]))
 
-    # Add incoming edges from new inputs
-    for i in 1:newinputcount
+    # add incoming edges from new inputs
+    for i in 1:new_input_count
         # println("Opinion difference is " * string(abs(a[inputcandidates[i]].opinion - a[v].opinion)))
-        add_edge!(g,inputcandidates[i],v)
+        add_edge!(g, input_candidates[i], v)
         # println("Edge" * string(inputcandidates[i]) * " => $v added.")
     end
 
 end
 
-function publish_tweet!(agent_list::AbstractArray, g::AbstractGraph, index::Integer)
-    # Index ist für mich irritierend, lieber v oder Agent?
-    tweet_opinion = agent_list[index].opinion + rand(-0.1:0.0000001:0.1)
+function publish_tweet!(agent_list::AbstractArray, g::AbstractGraph, agent::Integer)
+    tweet_opinion = agent_list[agent].opinion + rand(-0.1:0.0000001:0.1)
+    # upper opinion limit is 1
     if tweet_opinion > 1
         tweet_opinion = 1.0
+    # lower opinion limit is -1
+    elseif tweet_opinion < -1
+        tweet_opinion = -1.0
+    else
     end
-    t = Tweet(tweet_opinion, length(outneighbors(g, index)))
-    for v in outneighbors(g, index)
+    t = Tweet(tweet_opinion, length(outneighbors(g, agent)))
+    # send tweet to each outneighbor
+    for v in outneighbors(g, agent)
         push!(agent_list[v].timeline, t)
-        if length(agent_list[v].timeline) > 10 # Muss das nicht >=10 sein?
+        if length(agent_list[v].timeline) > 10 
             min_weight = minimum([t.weight for t in agent_list[v].timeline])
             del_idx = findfirst([t.weight == min_weight for t in agent_list[v].timeline])
             deleteat!(agent_list[v].timeline, del_idx)
