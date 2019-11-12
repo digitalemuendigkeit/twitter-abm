@@ -34,8 +34,8 @@ function tick!(agent_list::AbstractArray, g::AbstractGraph)
         update_opinion!(agent_list, idx)
         update_inclin_interact!(agent_list, idx)
         # like()
-        drop_worst_input(g,idx)
-        add_input(g,idx)
+        drop_worst_input(g,idx, agent_list)
+        add_input(g,idx, agent_list)
         if rand() < agent_list[idx].inclin_interact
             publish_tweet!(agent_list, g, idx)
         end

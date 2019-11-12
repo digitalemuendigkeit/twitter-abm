@@ -65,7 +65,7 @@ function like()
 end
 
 # Patrick
-function drop_worst_input(g::AbstractGraph, v::Integer, opThreshold=0.5)
+function drop_worst_input(g::AbstractGraph, v::Integer, agent_list::AbstractArray, opThreshold=0.5)
 
     # Look for current input sources that have too different opinion compared to own
     # and remove them
@@ -73,12 +73,11 @@ function drop_worst_input(g::AbstractGraph, v::Integer, opThreshold=0.5)
     #println("Current agent is $v. Opinion is " * string(a[v].opinion))
     #println("Waiting inneighbors in list:" * string(inneighbors(g,v)))
 
-    # Möglichkeit 1: Deepcopy der Inneighbors, nur eine Schleife erforderlich
     checkinput = deepcopy(inneighbors(g,v))
     while (length(checkinput) > 0)
 
         # println("Opinion difference between $v and " * string(checkinput[1]) *" is " * string(a[v].opinion - a[checkinput[1]].opinion))
-        if abs(a[v].opinion - a[checkinput[1]].opinion) > opThreshold
+        if abs(agent_list[v].opinion - agent_list[checkinput[1]].opinion) > opThreshold
             rem_edge!(g, checkinput[1], v)
             # println("Edge " * string(checkinput[1]) * " => $v removed")
         end
@@ -89,7 +88,7 @@ function drop_worst_input(g::AbstractGraph, v::Integer, opThreshold=0.5)
 end
 
 # Patrick
-function add_input(g::AbstractGraph, v::Integer, newinputcount=4)
+function add_input(g::AbstractGraph, v::Integer, agent_list::AbstractArray, newinputcount=4)
 
     if rand(1:10) > 2
         # In most cases, new friends are recommended out of friends of friends.
@@ -107,7 +106,7 @@ function add_input(g::AbstractGraph, v::Integer, newinputcount=4)
 
         inputcandidates = Integer[]
         for candidate in notneighbors
-            if abs(a[v].opinion - a[candidate].opinion) < 0.2
+            if abs(agent_list[v].opinion - agent_list[candidate].opinion) < 0.2
                 push!(inputcandidates,candidate)
             end
         end
@@ -135,6 +134,7 @@ function add_input(g::AbstractGraph, v::Integer, newinputcount=4)
 end
 
 function publish_tweet!(agent_list::AbstractArray, g::AbstractGraph, index::Integer)
+    # Index ist für mich irritierend, lieber v oder Agent?
     tweet_opinion = agent_list[index].opinion + rand(-0.1:0.0000001:0.1)
     if tweet_opinion > 1
         tweet_opinion = 1.0
@@ -142,7 +142,7 @@ function publish_tweet!(agent_list::AbstractArray, g::AbstractGraph, index::Inte
     t = Tweet(tweet_opinion, length(outneighbors(g, index)))
     for v in outneighbors(g, index)
         push!(agent_list[v].timeline, t)
-        if length(agent_list[v].timeline) > 10
+        if length(agent_list[v].timeline) > 10 # Muss das nicht >=10 sein?
             min_weight = minimum([t.weight for t in agent_list[v].timeline])
             del_idx = findfirst([t.weight == min_weight for t in agent_list[v].timeline])
             deleteat!(agent_list[v].timeline, del_idx)
