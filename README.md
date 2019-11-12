@@ -18,3 +18,5 @@ Agents have the following functions:
 - **like()**: Agents can interact with the tweets in their timeline by liking them. Like_count of a tweet in turn increases its weight.
 - **drop_worst_input()**: Removing the ingoing edge to all neighbors that are over accepted opinion threshold.
 - **add_input**: Adding new ingoing edges from agents. 2 different methods for addition: Either by "Recommendation System" that recommends random friends of friends as new input regardless of opinion difference, or randomly selecting new agents out of the whole network who hold a very similar opinion (comparable to adding real-world friends)
+
+## Tweets
