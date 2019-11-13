@@ -34,5 +34,52 @@ function create_network(n::Int64, m0::Int64, seed::Int64=0)
     end
 end
 
+function update_network(g::AbstractGraph, agent_list::AbstractArray)
+
+    # Network grows with a rate of 30%
+    joiningAgentscount = trunc(Integer, round(nv(g) * 0.3))
+
+    # First step: Delete agents that have below 10% input connections compared to current vertex count
+    leavingAgents = Integer[]
+    for v in 1:nv(g)
+        if length(inneighbors(g,v)) < nv(g) / 10
+            # println("Agent $v has only " * string(inneighbors(g,v)) * " inneighbors and will leave the network.")
+            append!(leavingAgents,v)
+        end
+    end
+
+    deleteat!(agent_list,leavingAgents)
+    rem_vertices!(g,leavingAgents)
+
+    # println("$joiningAgentscount will join the network now.")
+
+    add_vertices!(g, joiningAgentscount)
+    append!(agent_list,create_agents(joiningAgentscount))
+
+    # Joining Agents get connected randomly to existing agents.
+    # Number of edges for new agent is randomly chosen out of 1:3
+    for i in 1:joiningAgentscount
+        currentAgent = nv(g)-joiningAgentscount+i
+        newNeighborlist = getNewNeighbors(g,currentAgent)
+        for j in 1:5
+            # If Abfrage eigentlich nicht erforderlich, solange j < nv(g)
+            if length(newNeighborlist) > 0
+                newNeighbor = pop!(newNeighborlist)
+                add_edge!(g,currentAgent, newNeighbor)
+                # println("Edge added from $currentAgent => $newNeighbor.")
+            else
+                # println("No new neighbors possible")
+                break
+            end
+        end
+    end
+end
+
+function getNewNeighbors(g::AbstractGraph, v::Integer)
+    candidates = shuffle(setdiff([1:(v - 1); (v + 1):nv(g)], inneighbors(g, v)))
+    return candidates
+end
+
+
 # suppress output of include()
 ;

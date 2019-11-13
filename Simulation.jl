@@ -27,6 +27,14 @@ function create_agents(g::AbstractGraph)
     end
     return agent_list
 end
+function create_agents(i::Integer)
+    agent_list = Array{Agent, 1}(undef, i)
+    for i in 1:length(agent_list)
+        agent_list[i] = Agent(generate_opinion(), generate_inclin_interact())
+    end
+    return agent_list
+end
+
 # simulation step
 function tick!(agent_list::AbstractArray, g::AbstractGraph)
     for idx in shuffle(1:length(agent_list))
