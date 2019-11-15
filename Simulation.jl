@@ -1,64 +1,62 @@
 using LightGraphs
 
-# generate a random opinion value
 function generate_opinion()
     return rand(-1:0.0000001:1)
 end
 
-# generate a random value for inclination to interact
 # this function was adapted from:
-#    https://www.johndcook.com/julia_rng.html
-function generate_inclin_interact(mean=0.2)
-    if mean <= 0.0
+# https://www.johndcook.com/julia_rng.html
+function generate_inclin_interact(lambda=log(25))
+    if lambda <= 0.0
         error("mean must be positive")
     end
-    random_exp = -mean*log(rand())
-    if random_exp > 1
-        random_exp = generate_inclin_interact(mean)
-    end
-    return random_exp
+    -(1 / lambda) * log(rand())
 end
 
-# initialize agent list
-function create_agents(g::AbstractGraph)
-    agent_list = Array{Agent, 1}(undef, length(vertices(g)))
-    for i in 1:length(agent_list)
-        agent_list[i] = Agent(generate_opinion(), generate_inclin_interact())
+function create_agents(graph::AbstractGraph)
+    agent_list = Array{Agent, 1}(undef, length(vertices(graph)))
+    for agent in 1:length(agent_list)
+        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact())
     end
     return agent_list
 end
-function create_agents(i::Integer)
-    agent_list = Array{Agent, 1}(undef, i)
-    for i in 1:length(agent_list)
-        agent_list[i] = Agent(generate_opinion(), generate_inclin_interact())
+
+function create_agents(agent_count::Integer)
+    agent_list = Array{Agent, 1}(undef, agent_count)
+    for agent in 1:length(agent_list)
+        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact())
     end
     return agent_list
 end
 
 # simulation step
-function tick!(agent_list::AbstractArray, g::AbstractGraph)
-    for idx in shuffle(1:length(agent_list))
-        update_perceiv_publ_opinion!(g, idx, agent_list)
-        update_opinion!(agent_list, idx)
-        update_inclin_interact!(agent_list, idx)
+function tick!(graph::AbstractGraph, agent_list::AbstractArray)
+    for agent in shuffle(1:length(agent_list))
+        update_perceiv_publ_opinion!(graph, agent, agent_list)
+        update_opinion!(agent_list, agent)
+        # update_inclin_interact!(agent_list, agent)
         # like()
-        drop_worst_input(g, idx, agent_list)
-        add_input(g, idx, agent_list)
-        if rand() < agent_list[idx].inclin_interact
-            publish_tweet!(agent_list, g, idx)
+        drop_worst_input(graph, agent, agent_list)
+        add_input(graph, agent, agent_list)
+        inclin_interact = deepcopy(agent_list[agent].inclin_interact)
+        while inclin_interact > 0
+            if rand() < inclin_interact
+                publish_tweet!(graph, agent_list, agent)
+            end
+            inclin_interact -= 1.0
         end
-        update_timeline!(agent_list, idx)
+        update_feed!(agent_list, agent)
     end
 end
 
 # the actual simulation
-function simulate(g::AbstractGraph, agent_list::AbstractArray, n_iter::Integer)
+function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integer)
     agent_list = deepcopy(agent_list)
-    g = deepcopy(g)
-    for n in 1:n_iter
-        tick!(agent_list, g)
+    graph = deepcopy(graph)
+    for _ in 1:n_iter
+        tick!(graph, agent_list)
     end
-    return g, agent_list
+    return graph, agent_list
 end
 
 # suppress output of include()

@@ -30,6 +30,18 @@ create_network(10, 11)  # invalid
 create_network(10.1, 4)  # invalid
 create_network(10, 3.1)  # invalid
 
+# --- test network updating --- #
+
+g = create_network(500, 15, 1)
+a = create_agents(g)
+
+inneighbors(g, 243)  # input before
+add_input(g, a, 243, 4)
+inneighbors(g, 243)  # input after (should be 4 more than input before)
+
+inneighbors(g, 317)  # input before
+add_input(g, a, 317, 1000)
+inneighbors(g, 317)  # input after (should not throw out of bounds error)
 
 # --- test agent set creation --- #
 
@@ -56,3 +68,25 @@ generate_inclin_interact(0)  # invalid
 generate_inclin_interact(-1)  # invalid
 generate_inclin_interact(1)  # valid
 generate_inclin_interact()  # valid
+
+
+
+exp = [randexp() for _ in 1:1000]
+
+maximum(exp)
+
+using Plots
+
+histogram(exp)
+
+sum([e <= 1 ? 1 : 0 for e in exp]) / length(exp)
+
+function generate_inclin_interact(lambda=log(25))
+    if lambda <= 0.0
+        error("mean must be positive")
+    end
+    random_exp = -(1 / lambda) * log(rand())
+    return random_exp
+end
+
+histogram([generate_inclin_interact() for _ in 1:1000])
