@@ -42,7 +42,7 @@ function update_perceiv_publ_opinion!(graph::AbstractGraph, agent_list::Abstract
     agent_list[agent].perceiv_publ_opinion = mean([input_opinion_mean, feed_opinion_mean])
 end
 
-function update_opinion!(agent_list::AbstractArray, agent::Integer, base_weight::AbstractFloat=0.8)
+function update_opinion!(agent_list::AbstractArray, agent::Integer, base_weight::AbstractFloat=0.95)
     # weighted mean of own opinion and perceived public opinion
     agent_list[agent].opinion = (
         base_weight * agent_list[agent].opinion +
@@ -62,7 +62,7 @@ end
 function like()
 end
 
-function drop_worst_input(graph::AbstractGraph, agent::Integer, agent_list::AbstractArray, opinion_thresh=0.5)
+function drop_worst_input(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh=0.5)
     # look for current input tweets that have too different opinion compared to own
     # and remove them if source agent opinion is also too different
     for tweet in agent_list[agent].feed
@@ -111,7 +111,7 @@ function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::
     # send tweet to each outneighbor
     for neighbor in outneighbors(graph, agent)
         push!(agent_list[neighbor].feed, tweet)
-        if length(agent_list[neighbor].feed) > 10 
+        if length(agent_list[neighbor].feed) > 10
             min_weight = minimum([t.weight for t in agent_list[neighbor].feed])
             del_idx = findfirst([t.weight == min_weight for t in agent_list[neighbor].feed])
             deleteat!(agent_list[neighbor].feed, del_idx)

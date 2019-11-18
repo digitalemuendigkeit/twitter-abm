@@ -24,9 +24,6 @@ function create_network(n::Int64, m0::Int64, seed::Int64=0)
             append!(repeated_nodes, fill(source, m0))
             targets = shuffle(repeated_nodes)[1:m0]
             source += 1
-            if source > 1000
-                break
-            end
         end
         return g
     else

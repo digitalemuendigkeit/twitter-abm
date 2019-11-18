@@ -60,7 +60,7 @@ for _ in 1:1000
     op = generate_opinion()
     if op < -1 || op > 1
         error("function generate_opinion() is broken")
-    end 
+    end
 end  # correct if no output
 
 # generation of inclination to interact
@@ -90,3 +90,27 @@ function generate_inclin_interact(lambda=log(25))
 end
 
 histogram([generate_inclin_interact() for _ in 1:1000])
+
+
+include("Simulation.jl")
+g = create_network(100, 10, 1)
+a = create_agents(g)
+
+result = simulate(g,a,100)
+
+result[3]
+result
+
+using Plots
+
+result[3].N_edges
+collect(1:size(result[3],1))
+
+println(result[3].N_edges)
+
+
+plot(collect(1:size(result[3],1)),result[3].N_edges)
+plot(collect(1:size(result[3],1)),result[3].mean)
+plot(collect(1:size(result[3],1)),result[3].sd)
+
+[a.opinion for a in result[2]]
