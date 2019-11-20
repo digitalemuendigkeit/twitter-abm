@@ -32,7 +32,7 @@ function create_agents(agent_count::Integer)
 end
 
 # simulation step
-function tick!(graph::AbstractGraph, agent_list::AbstractArray)
+function tick!(graph::AbstractGraph, agent_list::AbstractArray, tickNr::Int64)
     for agent in shuffle(1:length(agent_list))
         update_perceiv_publ_opinion!(graph, agent_list, agent)
         update_opinion!(agent_list, agent)
@@ -49,14 +49,14 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray)
         end
         update_feed!(agent_list, agent)
     end
-    return log_Network(graph,agent_list)
+    return graph,agent_list, log_Network(graph,agent_list, tickNr)
 end
 
-function log_Network(graph::AbstractGraph, agent_list::AbstractArray)
+function log_Network(graph::AbstractGraph, agent_list::AbstractArray, tickNr::Int64)
     agent_opinions = [a.opinion for a in agent_list]
-    agent_perceiv_publ_opinion = [a.perceiv_publ_opinion for a in agent_list]
-    agent_indegree = indegree(graph)
-    return DataFrame(Opinion = agent_opinions, Perceiption = agent_perceiv_publ_opinion, Indegree = agent_indegree)
+    agent_perceiv_publ_opinions = [a.perceiv_publ_opinion for a in agent_list]
+    agent_indegrees = indegree(graph)
+    return DataFrame(TickNr = tickNr, Opinions = agent_opinions, Indegree = agent_indegrees)
 end
 
 
@@ -64,14 +64,14 @@ end
 function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integer)
     agent_list = deepcopy(agent_list)
     graph = deepcopy(graph)
-    df = DataFrame(Opinion = Float64[], Perceiption = Float64[], Indegree = Int64[])
+    df = DataFrame(TickNr = Int64[],Opinions = Float64[], Indegree = Float64[])
     for i in 1:n_iter
-        append!(df,tick!(graph, agent_list))
+        append!(df, tick!(graph, agent_list, i)[3])
         if i % ceil(n_iter / 10) == 0
             print(".")
         end
     end
-    return graph, agent_list, df
+    return df
 end
 
 # suppress output of include()
