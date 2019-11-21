@@ -34,7 +34,7 @@ for (i in 1:nrow(histarray))
 }
 
 # Build the 3D Histogram
-persp3Drgl(x=1:nrow(histarray),y = seq(-1,0.9, by = 0.1), contour=FALSE, z = histarray, box=FALSE, shade=0,theta = -80, phi = -30, xlab=\"\", ylab=\"\", zlab=\"Test\",  col=viridis(n=2000, direction = -1), colkey=FALSE)
+persp3Drgl(x=1:nrow(histarray),y = seq(-1,0.9, by = 0.1), contour=FALSE, z = histarray, box=FALSE, shade=0.1,theta = -80, phi = -30, xlab=\"\", ylab=\"\", zlab=\"Test\",  col=viridis(n=2000, direction = -1), colkey=FALSE)
 # Formatting the RGL
 
 view3d(userMatrix=um, zoom=0.7)
