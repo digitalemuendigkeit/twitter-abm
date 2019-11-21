@@ -1,5 +1,6 @@
 using RCall
 using Plots
+using DelimitedFiles
 
 # load all scripts
 include("Agent.jl")
@@ -8,122 +9,63 @@ include("Network.jl")
 include("Simulation.jl")
 
 
-# --- test agent creation ---#
-
-Agent(0.1, 0.1)  # valid
-Agent(0, 0)  # valid
-Agent(2, 0)  # invalid
-Agent(0, 2)  # invalid
-
-
-# --- test tweet creation --- #
-
-Tweet(0, 13)  # valid
-Tweet(0.4, 13.5)  # invalid
-Tweet(5, 2000)  # invalid
-Tweet(0.5, -1)  # invalid
-Tweet(-0.5, 14)  # valid
-
-
-# --- test network creation --- #
-
-create_network(10, 3, 3)  # valid
-create_network(10, 3)  # valid
-create_network(10, 11)  # invalid
-create_network(10.1, 4)  # invalid
-create_network(10, 3.1)  # invalid
-
-# --- test network updating --- #
-
-g = create_network(500, 15, 1)
-a = create_agents(g)
-
-inneighbors(g, 243)  # input before
-add_input(g, a, 243, 4)
-inneighbors(g, 243)  # input after (should be 4 more than input before)
-
-inneighbors(g, 317)  # input before
-add_input(g, a, 317, 1000)
-inneighbors(g, 317)  # input after (should not throw out of bounds error)
-
-# --- test agent set creation --- #
-
-g = create_network(10, 3)
-h = SimpleGraph()
-k = SimpleDiGraph(15)
-create_agents(g)  # valid
-create_agents(h)  # valid
-create_agents(k)  # valid
-
-
-# --- test initialization functions --- #
-
-# opinion generation
-for _ in 1:1000
-    op = generate_opinion()
-    if op < -1 || op > 1
-        error("function generate_opinion() is broken")
-    end
-end  # correct if no output
-
-# generation of inclination to interact
-generate_inclin_interact(0)  # invalid
-generate_inclin_interact(-1)  # invalid
-generate_inclin_interact(1)  # valid
-generate_inclin_interact()  # valid
-
-
-
-exp = [randexp() for _ in 1:1000]
-
-maximum(exp)
-
-using Plots
-
-histogram(exp)
-
-sum([e <= 1 ? 1 : 0 for e in exp]) / length(exp)
-
-function generate_inclin_interact(lambda=log(25))
-    if lambda <= 0.0
-        error("mean must be positive")
-    end
-    random_exp = -(1 / lambda) * log(rand())
-    return random_exp
-end
-
-histogram([generate_inclin_interact() for _ in 1:1000])
-
-
-include("Simulation.jl")
-g = create_network(100, 10, 1)
+g = create_network(200, 10, 1)
 a = create_agents(g)
 
 result = simulate(g,a,200)
+
 # Prepare for 3D Histogram
-z = reshape(result.Opinions,100,div(length(result.Opinions),100)) # Hardcoded int is agent_count
-@rput z
+z = DataFrame(reshape(result.Opinions,200,div(length(result.Opinions),200))) # Hardcoded int is agent_count
+viewpoint = [0.369116097688674 -0.929286122 0.013450718 0;
+                0.33802402 0.147717804 0.929472387 0;
+                -0.865732551 -0.338536531 0.368645668 0;
+                0 0 0 1]
 
-R"""
-library(viridis)
-library(plot3D)
-"""
-
-# Test Histogram Plot in Julia
-result[result[:,1].== 100, 2]
-histogram(result[result[:,1].== 1, 2])
-
-# Test Histogram Plot in R
-R"test = hist(x = z[,200], breaks = seq(-1,1, by = 0.1))"
+@rput z viewpoint
 
 # Build Array of Histograms
 R"""
-histarray <- array(dim=c(200,20)) # First number is agent_count, second is number of bars
-for (i in 1:nrow(testarray))
+library(plot3Drgl)
+histarray <- array(dim=c(200,20)) # First number is Simulation steps, second is number of bars
+for (i in 1:nrow(histarray))
 {
     temphist = hist(x = z[,i], breaks = seq(-1,1, by = 0.1))
-    histarray[i,] = temphist$density/10*200
+    histarray[i,] = temphist$counts
 }
+
+# Build the 3D Histogram
+persp3Drgl(x=1:nrow(histarray),y = seq(-1,0.9, by = 0.1), contour=FALSE, z = histarray, box=FALSE, shade=0,theta = -80, phi = -30, xlab=\"\", ylab=\"\", zlab=\"Test\",  col=viridis(n=2000, direction = -1), colkey=FALSE)
+# Formatting the RGL
+
+view3d(userMatrix=um, zoom=0.7)
+aspect3d(x=1.4,y=1.2,z=0.5)
+bbox3d(color=c(\"#EEEEEE\",\"#AAAAAA\"))
+grid3d(side=\"x++\", col=\"white\", lwd=2)
+grid3d(side=\"y++\", col=\"white\", lwd=2)
+grid3d(side=\"z--\", col=\"white\", lwd=2)
+mtext3d(\"Agent Count\", \"z-+\", line=2.5)
+mtext3d(\"Opinion\", \"y--\", line=2.4)
+mtext3d(\"Simulation Step\", \"x++\", line=2.5)
 """
-# Build 3D Histogram
-R"persp3D(x=1:nrow(histarray),y = seq(-1,0.9, by = 0.1), z = histarray,theta = -70, phi = 30, xlab=\"Simulation Steps\", ylab=\"Opinion Distribution\", zlab=\"Agent count\", ticktype = \"detailed\",  col=viridis(n=2000, direction = -1))"
+
+# Save to PNG
+R"snapshot3d(\"output.png\")"
+
+
+# Save Viewpoint Position
+R"""
+um<-par3d()$userMatrix
+"""
+@rget um
+# Write to CSV
+writedlm("viewpoint.csv",um, ';')
+# Restore Viewpoint Position from CSV
+readdlm("viewpoint.csv",';')
+
+# Test Histogram Plot in Julia
+result[result[:,1].== 100, 2]
+histogram(result[result[:,1].== 200, 2])
+
+# Test Histogram Plot in R
+R"test = hist(x = z[,200], breaks = seq(-1,1, by = 0.1))"
+R"test$counts"
