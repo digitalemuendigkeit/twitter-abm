@@ -5,9 +5,10 @@ mutable struct Agent
     opinion::AbstractFloat
     inclin_interact::AbstractFloat
     perceiv_publ_opinion::AbstractFloat
-    activity::AbstractFloat
+    check_regularity::AbstractFloat
+    active::Bool
     feed::AbstractArray
-    function Agent(opinion, inclin_interact, activity)
+    function Agent(opinion, inclin_interact, check_regularity)
         # check if opinion value is valid
         if opinion < -1 || opinion > 1
             error("invalid opinion value")
@@ -16,7 +17,7 @@ mutable struct Agent
         if inclin_interact < 0
             error("invalid value for inclination to interact")
         end
-        new(opinion, inclin_interact, opinion, activity,Array{Tweet, 1}(undef, 0))
+        new(opinion, inclin_interact, opinion, check_regularity, true, Array{Tweet, 1}(undef, 0))
     end
 end
 
@@ -43,26 +44,32 @@ function update_perceiv_publ_opinion!(graph::AbstractGraph, agent_list::Abstract
     agent_list[agent].perceiv_publ_opinion = mean([input_opinion_mean, feed_opinion_mean])
 end
 
-function update_opinion!(agent_list::AbstractArray, agent::Integer, base_weight::AbstractFloat=0.95)
+function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3, base_weight::AbstractFloat=0.95)
     # weighted mean of own opinion and perceived public opinion
-    if (abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) < 0.3)
+    if (abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) < opinion_thresh)
         agent_list[agent].opinion = (
             base_weight * agent_list[agent].opinion +
             (1 - base_weight) * agent_list[agent].perceiv_publ_opinion
-            )
-        agent_list[agent].activity = 1.2 * agent_list[agent].activity
-        if agent_list[agent].activity > 1
-            agent_list[agent].activity = 1
+        )
+        agent_list[agent].check_regularity = 1.2 * agent_list[agent].check_regularity
+        if agent_list[agent].check_regularity > 1
+            agent_list[agent].check_regularity = 1
         end
-        else
-            agent_list[agent].activity = 0.95 * agent_list[agent].activity
-    # else
-    #     agent_list[agent].opinion = 1.02 * agent_list[agent].opinion
-    #     if agent_list[agent].opinion > 1
-    #         agent_list[agent].opinion = 1
-    #     elseif agent_list[agent].opinion < -1
-    #         agent_list[agent].opinion = -1
-    #     end
+    else
+        agent_list[agent].opinion = 1.02 * agent_list[agent].opinion
+        if agent_list[agent].opinion > 1
+            agent_list[agent].opinion = 1
+        elseif agent_list[agent].opinion < -1
+            agent_list[agent].opinion = -1
+        end
+    end
+end
+
+function update_check_regularity!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3)
+    if (abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) > opinion_thresh)
+        agent_list[agent].check_regularity = 0.95 * agent_list[agent].check_regularity
+    else
+        agent_list[agent].check_regularity = 1
     end
 end
 
@@ -78,7 +85,7 @@ end
 function like()
 end
 
-function drop_worst_input(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh=0.5)
+function drop_worst_input(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.5)
     # look for current input tweets that have too different opinion compared to own
     # and remove them if source agent opinion is also too different
     for tweet in agent_list[agent].feed
@@ -105,12 +112,11 @@ function add_input(graph::AbstractGraph, agent_list::AbstractArray, agent::Integ
         append!(input_queue, subset)
     end
     # add edges
+    if (length(input_queue) - new_input_count) < 0
+        new_input_count = length(input_queue)
+    end
     for _ in 1:new_input_count
-        try
-            add_edge!(graph, popfirst!(input_queue), agent)
-        catch
-            break
-        end
+        add_edge!(graph, popfirst!(input_queue), agent)
     end
 end
 

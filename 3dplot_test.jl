@@ -25,7 +25,7 @@ activityhist
 
 # Create another visualization. Result Dataframe, Agent count and step count needed as params
 # Last param defines visualization method: 1=Build histograms, 2=Build lineplots
-visualize_Opinionspread(result[1],100,200,2)
+visualize_opinionspread(result[1],100,200)
 
 # Export data for tests in RStudio
 z = DataFrame(reshape(result.Opinions,100,div(length(result.Opinions),100))) # Hardcoded int is agent_count

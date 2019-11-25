@@ -1,6 +1,7 @@
 using LightGraphs
 using DataFrames
 using Statistics
+using RCall
 
 function generate_opinion()
     return rand(-1:0.0000001:1)
@@ -15,14 +16,14 @@ function generate_inclin_interact(lambda=log(25))
     -(1 / lambda) * log(rand())
 end
 
-function generate_activity()
-    return 1-(rand()/4)^2
+function generate_check_regularity()
+    return 1 - (rand() / 4)^2
 end
 
 function create_agents(graph::AbstractGraph)
     agent_list = Array{Agent, 1}(undef, length(vertices(graph)))
     for agent in 1:length(agent_list)
-        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_activity())
+        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity())
     end
     return agent_list
 end
@@ -30,15 +31,15 @@ end
 function create_agents(agent_count::Integer)
     agent_list = Array{Agent, 1}(undef, agent_count)
     for agent in 1:length(agent_list)
-        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_activity())
+        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity())
     end
     return agent_list
 end
 
 # simulation step
-function tick!(graph::AbstractGraph, agent_list::AbstractArray, tickNr::Int64)
+function tick!(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::Int64)
     for agent in shuffle(1:length(agent_list))
-        if rand() < agent_list[agent].activity
+        if rand() < agent_list[agent].check_regularity
             update_perceiv_publ_opinion!(graph, agent_list, agent)
             update_opinion!(agent_list, agent)
             # update_inclin_interact!(agent_list, agent)
@@ -53,16 +54,17 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray, tickNr::Int64)
                 inclin_interact -= 1.0
             end
             update_feed!(agent_list, agent)
+            update_check_regularity!(agent_list, agent)
         end
     end
-    return graph,agent_list, log_Network(graph,agent_list, tickNr)
+    return graph, agent_list, log_network(graph, agent_list, tick_nr)
 end
 
-function log_Network(graph::AbstractGraph, agent_list::AbstractArray, tickNr::Int64)
+function log_network(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::Int64)
     agent_opinions = [a.opinion for a in agent_list]
     agent_perceiv_publ_opinions = [a.perceiv_publ_opinion for a in agent_list]
     agent_indegrees = indegree(graph)
-    return DataFrame(TickNr = tickNr, Opinions = agent_opinions, Indegree = agent_indegrees)
+    return DataFrame(TickNr = tick_nr, Opinions = agent_opinions, Indegree = agent_indegrees)
 end
 
 
@@ -70,8 +72,8 @@ end
 function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integer)
     agent_list = deepcopy(agent_list)
     graph = deepcopy(graph)
-    df = DataFrame(TickNr = Int64[],Opinions = Float64[], Indegree = Float64[])
-    append!(df,DataFrame(TickNr = 0, Opinions = [a.opinion for a in agent_list], Indegree = indegree(graph)))
+    df = DataFrame(TickNr = Int64[], Opinions = Float64[], Indegree = Float64[])
+    append!(df, DataFrame(TickNr = 0, Opinions = [a.opinion for a in agent_list], Indegree = indegree(graph)))
     for i in 1:n_iter
         # update_network(graph,agent_list)
         append!(df, tick!(graph, agent_list, i)[3])
@@ -79,97 +81,70 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integ
             print(".")
         end
     end
-    visualize_Opinionspread(df,length(agent_list),n_iter)
+    visualize_opinionspread(df, length(agent_list), n_iter)
     return df, agent_list
 end
 
-function visualize_Opinionspread(df::DataFrame, agentcount::Int64, iterations::Int64,impl::Int64=2)
+function visualize_opinionspread(df::DataFrame, agent_count::Int64, iterations::Int64)
     # Prepare for 3D Histogram
-    z = DataFrame(reshape(df.Opinions,agentcount,div(length(df.Opinions),agentcount))) # Hardcoded int is agent_count
+    z = DataFrame(reshape(df.Opinions, agent_count, div(length(df.Opinions), agent_count))) # Hardcoded int is agent_count
     viewpoint = [0.7800890207290649 -0.6242091059684753 -0.042710430920124054 1.9048346798919553;
                     0.32599347829818726 0.34723764657974243 0.8792917132377625 17.26966831053973;
                     -0.5340309143066406 -0.6998494267463684 0.47436413168907166 18.17097474580554;
                     0.0 0.0 0.0 1.0]
 
-    @rput agentcount iterations z viewpoint
+    @rput agent_count iterations z viewpoint
 
     # Build Array of Histograms
-    if impl == 1
-        R"""
-        library(plot3Drgl)
-        library(viridis)
-        histarray <- array(dim=c(iterations+1,20)) # First number is Simulation steps, second is number of bars
-        for (i in 1:nrow(histarray))
-        {
-            temphist = hist(x = z[,i], breaks = seq(-1,1, by = 0.1))
-            histarray[i,] = temphist$counts
-        }
+    R"""
+    library(plot3Drgl)
+    library(viridis)
+    library(dplyr)
 
-        # Build the 3D Histogram
-        hist3Drgl(x=0:(nrow(histarray)-1),y=rownames(histarray), contour=FALSE, z = histarray, box=FALSE, shade=0.1,xlab=\"\", ylab=\"\", zlab=\"\",  col=viridis(n=2000, direction = -1), colkey=FALSE, axes=FALSE)
-
-        # Formatting the Output
-        view3d(userMatrix=viewpoint, , zoom=0.6)
-        par3d(windowRect = c(405, 104, 1795, 984))
-        aspect3d(x=1.4,y=1.2,z=0.5)
-        bbox3d(color=c(\"#EEEEEE\",\"#AAAAAA\"), xlen = 0, ylen = 0, zlen = 0)
-        grid3d(side=\"x++\", col=\"white\", lwd=2)
-        grid3d(side=\"y++\", col=\"white\", lwd=2)
-        grid3d(side=\"z--\", col=\"white\", lwd=2)
-        axis3d('x--')
-        axis3d('y--')
-        axis3d('z-+')
-        mtext3d(\"Simulation Step\", \"x--\", line=2)
-        mtext3d(\"Opinion\", \"y--\", line=2)
-        mtext3d(\"Agent Count\", \"z-+\", line=2)
-        """
-
-        # Save to PNG
-        R"snapshot3d(paste0(\"output_\",agentcount,\"_\",iterations,\".png\"))"
-    else
-        R"""
-        library(plot3Drgl)
-        library(viridis)
-        library(dplyr)
-
-        seq(-1,1, by=0.1) %>%
-          round(digits=1) %>%
-          table() -> histarray
+    seq(-1,1, by=0.1) %>%
+        round(digits=1) %>%
+        table() -> histarray
 
 
-        for (i in 1:ncol(z)){
-          z[,i] %>%
-          round(digits=1) %>%
-          table() %>%
-          bind_rows(histarray,.) -> histarray
-        }
+    for (i in 1:ncol(z)){
+        z[,i] %>%
+        round(digits=1) %>%
+        table() %>%
+        bind_rows(histarray,.) -> histarray
+    }
 
-        histarray[is.na(histarray)] <- 0
-        histarray %>%
-          .[-1,] %>%
-          as.matrix() -> histarraymatrix
+    histarray[is.na(histarray)] <- 0
+    histarray %>%
+        .[-1,] %>%
+        as.matrix() -> histarraymatrix
 
-        # Build the 3D Histogram
-        persp3Drgl(x=0:(nrow(histarraymatrix)-1),y = seq(-1,1, by = 0.1), contour=FALSE, z = histarraymatrix, box=FALSE, shade=0.1,xlab=\"\", ylab=\"\", zlab=\"\",  col=viridis(n=2000, direction = -1), colkey=FALSE, axes=FALSE)
+    # Build the 3D Histogram
+    persp3Drgl(
+        x=0: 
+            (nrow(histarraymatrix) - 1), y = seq(-1,1, by=0.1), 
+            contour=FALSE, z = histarraymatrix, 
+            box=FALSE, shade=0.1,
+            xlab=\"\", ylab=\"\", zlab=\"\",  
+            col=viridis(n=2000, direction = -1), colkey=FALSE, axes=FALSE
+        )
 
-        # Formatting the Output
-        view3d(userMatrix=viewpoint, , zoom=0.6)
-        par3d(windowRect = c(405, 104, 1795, 984))
-        aspect3d(x=1.4,y=1.2,z=0.5)
-        bbox3d(color=c(\"#EEEEEE\",\"#AAAAAA\"), xlen = 0, ylen = 0, zlen = 0)
-        grid3d(side=\"x++\", col=\"white\", lwd=2)
-        grid3d(side=\"y++\", col=\"white\", lwd=2)
-        grid3d(side=\"z--\", col=\"white\", lwd=2)
-        axis3d('x--')
-        axis3d('y--')
-        axis3d('z-+')
-        mtext3d(\"Simulation Step\", \"x--\", line=2)
-        mtext3d(\"Opinion\", \"y--\", line=2)
-        mtext3d(\"Agent Count\", \"z-+\", line=2)
+    # Formatting the Output
+    view3d(userMatrix=viewpoint, zoom=0.6)
+    par3d(windowRect = c(405, 104, 1795, 984))
+    aspect3d(x=1.4,y=1.2,z=0.5)
+    bbox3d(color=c(\"#EEEEEE\",\"#AAAAAA\"), xlen = 0, ylen = 0, zlen = 0)
+    grid3d(side=\"x++\", col=\"white\", lwd=2)
+    grid3d(side=\"y++\", col=\"white\", lwd=2)
+    grid3d(side=\"z--\", col=\"white\", lwd=2)
+    axis3d('x--')
+    axis3d('y--')
+    axis3d('z-+')
+    mtext3d(\"Simulation Step\", \"x--\", line=2)
+    mtext3d(\"Opinion\", \"y--\", line=2)
+    mtext3d(\"Agent Count\", \"z-+\", line=2)
 
-        snapshot3d(paste0(\"output_\",agentcount,\"_\",iterations,\".png\"))
-        """
-    end
+    snapshot3d(paste0(\"output_\", agent_count,\"_\", iterations, \".png\"))
+    """
 end
 
 # suppress output of include()
