@@ -15,10 +15,14 @@ function generate_inclin_interact(lambda=log(25))
     -(1 / lambda) * log(rand())
 end
 
+function generate_activity()
+    return 1-(rand()/4)^2
+end
+
 function create_agents(graph::AbstractGraph)
     agent_list = Array{Agent, 1}(undef, length(vertices(graph)))
     for agent in 1:length(agent_list)
-        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact())
+        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_activity())
     end
     return agent_list
 end
@@ -26,7 +30,7 @@ end
 function create_agents(agent_count::Integer)
     agent_list = Array{Agent, 1}(undef, agent_count)
     for agent in 1:length(agent_list)
-        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact())
+        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_activity())
     end
     return agent_list
 end
@@ -34,20 +38,22 @@ end
 # simulation step
 function tick!(graph::AbstractGraph, agent_list::AbstractArray, tickNr::Int64)
     for agent in shuffle(1:length(agent_list))
-        update_perceiv_publ_opinion!(graph, agent_list, agent)
-        update_opinion!(agent_list, agent)
-        # update_inclin_interact!(agent_list, agent)
-        # like()
-        drop_worst_input(graph, agent_list, agent)
-        add_input(graph, agent_list, agent)
-        inclin_interact = deepcopy(agent_list[agent].inclin_interact)
-        while inclin_interact > 0
-            if rand() < inclin_interact
-                publish_tweet!(graph, agent_list, agent)
+        if rand() < agent_list[agent].activity
+            update_perceiv_publ_opinion!(graph, agent_list, agent)
+            update_opinion!(agent_list, agent)
+            # update_inclin_interact!(agent_list, agent)
+            # like()
+            drop_worst_input(graph, agent_list, agent)
+            add_input(graph, agent_list, agent)
+            inclin_interact = deepcopy(agent_list[agent].inclin_interact)
+            while inclin_interact > 0
+                if rand() < inclin_interact
+                    publish_tweet!(graph, agent_list, agent)
+                end
+                inclin_interact -= 1.0
             end
-            inclin_interact -= 1.0
+            update_feed!(agent_list, agent)
         end
-        update_feed!(agent_list, agent)
     end
     return graph,agent_list, log_Network(graph,agent_list, tickNr)
 end
@@ -67,21 +73,22 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integ
     df = DataFrame(TickNr = Int64[],Opinions = Float64[], Indegree = Float64[])
     append!(df,DataFrame(TickNr = 0, Opinions = [a.opinion for a in agent_list], Indegree = indegree(graph)))
     for i in 1:n_iter
+        # update_network(graph,agent_list)
         append!(df, tick!(graph, agent_list, i)[3])
         if i % ceil(n_iter / 10) == 0
             print(".")
         end
     end
-    visualize_Opinionspread(df,length(agent_list),n_iter,2)
-    return df
+    visualize_Opinionspread(df,length(agent_list),n_iter)
+    return df, agent_list
 end
 
-function visualize_Opinionspread(df::DataFrame, agentcount::Int64, iterations::Int64,impl::Int64=1)
+function visualize_Opinionspread(df::DataFrame, agentcount::Int64, iterations::Int64,impl::Int64=2)
     # Prepare for 3D Histogram
     z = DataFrame(reshape(df.Opinions,agentcount,div(length(df.Opinions),agentcount))) # Hardcoded int is agent_count
-    viewpoint = [0.7800890207290649 -0.6242091059684753 -0.042710430920124054 18.767707439031252;
-                    0.32599347829818726 0.34723764657974243 0.8792917132377625 31.01290959934912;
-                    -0.5340309143066406 -0.6998494267463684 0.47436413168907166 18.17097482391883;
+    viewpoint = [0.7800890207290649 -0.6242091059684753 -0.042710430920124054 1.9048346798919553;
+                    0.32599347829818726 0.34723764657974243 0.8792917132377625 17.26966831053973;
+                    -0.5340309143066406 -0.6998494267463684 0.47436413168907166 18.17097474580554;
                     0.0 0.0 0.0 1.0]
 
     @rput agentcount iterations z viewpoint
@@ -99,7 +106,7 @@ function visualize_Opinionspread(df::DataFrame, agentcount::Int64, iterations::I
         }
 
         # Build the 3D Histogram
-        persp3Drgl(x=0:(nrow(histarray)-1),y = seq(-1,0.9, by = 0.1), contour=FALSE, z = histarray, box=FALSE, shade=0.1,xlab=\"\", ylab=\"\", zlab=\"\",  col=viridis(n=2000, direction = -1), colkey=FALSE, axes=FALSE)
+        hist3Drgl(x=0:(nrow(histarray)-1),y=rownames(histarray), contour=FALSE, z = histarray, box=FALSE, shade=0.1,xlab=\"\", ylab=\"\", zlab=\"\",  col=viridis(n=2000, direction = -1), colkey=FALSE, axes=FALSE)
 
         # Formatting the Output
         view3d(userMatrix=viewpoint, , zoom=0.6)

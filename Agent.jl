@@ -5,8 +5,9 @@ mutable struct Agent
     opinion::AbstractFloat
     inclin_interact::AbstractFloat
     perceiv_publ_opinion::AbstractFloat
+    activity::AbstractFloat
     feed::AbstractArray
-    function Agent(opinion, inclin_interact)
+    function Agent(opinion, inclin_interact, activity)
         # check if opinion value is valid
         if opinion < -1 || opinion > 1
             error("invalid opinion value")
@@ -15,7 +16,7 @@ mutable struct Agent
         if inclin_interact < 0
             error("invalid value for inclination to interact")
         end
-        new(opinion, inclin_interact, opinion, Array{Tweet, 1}(undef, 0))
+        new(opinion, inclin_interact, opinion, activity,Array{Tweet, 1}(undef, 0))
     end
 end
 
@@ -44,10 +45,25 @@ end
 
 function update_opinion!(agent_list::AbstractArray, agent::Integer, base_weight::AbstractFloat=0.95)
     # weighted mean of own opinion and perceived public opinion
-    agent_list[agent].opinion = (
-        base_weight * agent_list[agent].opinion +
-        (1 - base_weight) * agent_list[agent].perceiv_publ_opinion
-    )
+    if (abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) < 0.3)
+        agent_list[agent].opinion = (
+            base_weight * agent_list[agent].opinion +
+            (1 - base_weight) * agent_list[agent].perceiv_publ_opinion
+            )
+        agent_list[agent].activity = 1.2 * agent_list[agent].activity
+        if agent_list[agent].activity > 1
+            agent_list[agent].activity = 1
+        end
+        else
+            agent_list[agent].activity = 0.95 * agent_list[agent].activity
+    # else
+    #     agent_list[agent].opinion = 1.02 * agent_list[agent].opinion
+    #     if agent_list[agent].opinion > 1
+    #         agent_list[agent].opinion = 1
+    #     elseif agent_list[agent].opinion < -1
+    #         agent_list[agent].opinion = -1
+    #     end
+    end
 end
 
 function update_inclin_interact!(agent_list::AbstractArray, agent::Integer, base_weight::AbstractFloat=0.9)

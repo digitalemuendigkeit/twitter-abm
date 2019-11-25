@@ -34,19 +34,19 @@ end
 function update_network(g::AbstractGraph, agent_list::AbstractArray)
 
     # Network grows with a rate of 30%
-    joiningAgentscount = trunc(Integer, round(nv(g) * 0.3))
+    joiningAgentscount = floor(Integer, nv(g) * 0.3)
 
-    # First step: Delete agents that have below 10% input connections compared to current vertex count
-    leavingAgents = Integer[]
-    for v in 1:nv(g)
-        if length(inneighbors(g,v)) < nv(g) / 10
-            # println("Agent $v has only " * string(inneighbors(g,v)) * " inneighbors and will leave the network.")
-            append!(leavingAgents,v)
-        end
-    end
-
-    deleteat!(agent_list,leavingAgents)
-    rem_vertices!(g,leavingAgents)
+    # # First step: Delete agents that have below 10% input connections compared to current vertex count
+    # leavingAgents = Integer[]
+    # for v in 1:nv(g)
+    #     if length(inneighbors(g,v)) < nv(g) / 10
+    #         # println("Agent $v has only " * string(inneighbors(g,v)) * " inneighbors and will leave the network.")
+    #         append!(leavingAgents,v)
+    #     end
+    # end
+    #
+    # deleteat!(agent_list,leavingAgents)
+    # rem_vertices!(g,leavingAgents)
 
     # println("$joiningAgentscount will join the network now.")
 
