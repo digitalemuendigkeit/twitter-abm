@@ -65,13 +65,104 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integ
     agent_list = deepcopy(agent_list)
     graph = deepcopy(graph)
     df = DataFrame(TickNr = Int64[],Opinions = Float64[], Indegree = Float64[])
+    append!(df,DataFrame(TickNr = 0, Opinions = [a.opinion for a in agent_list], Indegree = indegree(graph)))
     for i in 1:n_iter
         append!(df, tick!(graph, agent_list, i)[3])
         if i % ceil(n_iter / 10) == 0
             print(".")
         end
     end
+    visualize_Opinionspread(df,length(agent_list),n_iter,2)
     return df
+end
+
+function visualize_Opinionspread(df::DataFrame, agentcount::Int64, iterations::Int64,impl::Int64=1)
+    # Prepare for 3D Histogram
+    z = DataFrame(reshape(df.Opinions,agentcount,div(length(df.Opinions),agentcount))) # Hardcoded int is agent_count
+    viewpoint = [0.7800890207290649 -0.6242091059684753 -0.042710430920124054 18.767707439031252;
+                    0.32599347829818726 0.34723764657974243 0.8792917132377625 31.01290959934912;
+                    -0.5340309143066406 -0.6998494267463684 0.47436413168907166 18.17097482391883;
+                    0.0 0.0 0.0 1.0]
+
+    @rput agentcount iterations z viewpoint
+
+    # Build Array of Histograms
+    if impl == 1
+        R"""
+        library(plot3Drgl)
+        library(viridis)
+        histarray <- array(dim=c(iterations+1,20)) # First number is Simulation steps, second is number of bars
+        for (i in 1:nrow(histarray))
+        {
+            temphist = hist(x = z[,i], breaks = seq(-1,1, by = 0.1))
+            histarray[i,] = temphist$counts
+        }
+
+        # Build the 3D Histogram
+        persp3Drgl(x=0:(nrow(histarray)-1),y = seq(-1,0.9, by = 0.1), contour=FALSE, z = histarray, box=FALSE, shade=0.1,xlab=\"\", ylab=\"\", zlab=\"\",  col=viridis(n=2000, direction = -1), colkey=FALSE, axes=FALSE)
+
+        # Formatting the Output
+        view3d(userMatrix=viewpoint, , zoom=0.6)
+        par3d(windowRect = c(405, 104, 1795, 984))
+        aspect3d(x=1.4,y=1.2,z=0.5)
+        bbox3d(color=c(\"#EEEEEE\",\"#AAAAAA\"), xlen = 0, ylen = 0, zlen = 0)
+        grid3d(side=\"x++\", col=\"white\", lwd=2)
+        grid3d(side=\"y++\", col=\"white\", lwd=2)
+        grid3d(side=\"z--\", col=\"white\", lwd=2)
+        axis3d('x--')
+        axis3d('y--')
+        axis3d('z-+')
+        mtext3d(\"Simulation Step\", \"x--\", line=2)
+        mtext3d(\"Opinion\", \"y--\", line=2)
+        mtext3d(\"Agent Count\", \"z-+\", line=2)
+        """
+
+        # Save to PNG
+        R"snapshot3d(paste0(\"output_\",agentcount,\"_\",iterations,\".png\"))"
+    else
+        R"""
+        library(plot3Drgl)
+        library(viridis)
+        library(dplyr)
+
+        seq(-1,1, by=0.1) %>%
+          round(digits=1) %>%
+          table() -> histarray
+
+
+        for (i in 1:ncol(z)){
+          z[,i] %>%
+          round(digits=1) %>%
+          table() %>%
+          bind_rows(histarray,.) -> histarray
+        }
+
+        histarray[is.na(histarray)] <- 0
+        histarray %>%
+          .[-1,] %>%
+          as.matrix() -> histarraymatrix
+
+        # Build the 3D Histogram
+        persp3Drgl(x=0:(nrow(histarraymatrix)-1),y = seq(-1,1, by = 0.1), contour=FALSE, z = histarraymatrix, box=FALSE, shade=0.1,xlab=\"\", ylab=\"\", zlab=\"\",  col=viridis(n=2000, direction = -1), colkey=FALSE, axes=FALSE)
+
+        # Formatting the Output
+        view3d(userMatrix=viewpoint, , zoom=0.6)
+        par3d(windowRect = c(405, 104, 1795, 984))
+        aspect3d(x=1.4,y=1.2,z=0.5)
+        bbox3d(color=c(\"#EEEEEE\",\"#AAAAAA\"), xlen = 0, ylen = 0, zlen = 0)
+        grid3d(side=\"x++\", col=\"white\", lwd=2)
+        grid3d(side=\"y++\", col=\"white\", lwd=2)
+        grid3d(side=\"z--\", col=\"white\", lwd=2)
+        axis3d('x--')
+        axis3d('y--')
+        axis3d('z-+')
+        mtext3d(\"Simulation Step\", \"x--\", line=2)
+        mtext3d(\"Opinion\", \"y--\", line=2)
+        mtext3d(\"Agent Count\", \"z-+\", line=2)
+
+        snapshot3d(paste0(\"output_\",agentcount,\"_\",iterations,\".png\"))
+        """
+    end
 end
 
 # suppress output of include()
