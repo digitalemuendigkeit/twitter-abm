@@ -37,15 +37,15 @@ function create_agents(agent_count::Integer)
 end
 
 # simulation step
-function tick!(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::Int64)
+function tick!(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::Int64, max_inactive_ticks::Integer=2)
     for agent in shuffle(1:length(agent_list))
-        if rand() < agent_list[agent].check_regularity
+        if rand() < agent_list[agent].check_regularity && agent_list[agent].active
             update_perceiv_publ_opinion!(graph, agent_list, agent)
             update_opinion!(agent_list, agent)
             # update_inclin_interact!(agent_list, agent)
             # like()
-            drop_worst_input(graph, agent_list, agent)
-            add_input(graph, agent_list, agent)
+            drop_worst_input!(graph, agent_list, agent)
+            add_input!(graph, agent_list, agent)
             inclin_interact = deepcopy(agent_list[agent].inclin_interact)
             while inclin_interact > 0
                 if rand() < inclin_interact
@@ -55,8 +55,14 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::Int64)
             end
             update_feed!(agent_list, agent)
             update_check_regularity!(agent_list, agent)
+        else
+            agent_list[agent].inactive_ticks += 1
+            if agent_list[agent].inactive_ticks > max_inactive_ticks
+                set_inactive!(graph, agent_list, agent)
+            end
         end
     end
+    update_network!(graph, agent_list)
     return graph, agent_list, log_network(graph, agent_list, tick_nr)
 end
 
@@ -64,16 +70,14 @@ function log_network(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::I
     agent_opinions = [a.opinion for a in agent_list]
     agent_perceiv_publ_opinions = [a.perceiv_publ_opinion for a in agent_list]
     agent_indegrees = indegree(graph)
-    return DataFrame(TickNr = tick_nr, Opinions = agent_opinions, Indegree = agent_indegrees)
+    return DataFrame(TickNr = tick_nr, AgentID = 1:length(agent_list), Opinion = agent_opinions, Indegree = agent_indegrees)
 end
-
 
 # the actual simulation
 function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integer)
     agent_list = deepcopy(agent_list)
     graph = deepcopy(graph)
-    df = DataFrame(TickNr = Int64[], Opinions = Float64[], Indegree = Float64[])
-    append!(df, DataFrame(TickNr = 0, Opinions = [a.opinion for a in agent_list], Indegree = indegree(graph)))
+    df = DataFrame(TickNr = Int64[], AgentID = Int64[], Opinion = Float64[], Indegree = Float64[])
     for i in 1:n_iter
         # update_network(graph,agent_list)
         append!(df, tick!(graph, agent_list, i)[3])
@@ -81,8 +85,8 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integ
             print(".")
         end
     end
-    visualize_opinionspread(df, length(agent_list), n_iter)
-    return df, agent_list
+    # visualize_opinionspread(df, length(agent_list), n_iter)
+    return df, agent_list, graph
 end
 
 function visualize_opinionspread(df::DataFrame, agent_count::Int64, iterations::Int64)

@@ -7,6 +7,7 @@ mutable struct Agent
     perceiv_publ_opinion::AbstractFloat
     check_regularity::AbstractFloat
     active::Bool
+    inactive_ticks::Integer
     feed::AbstractArray
     function Agent(opinion, inclin_interact, check_regularity)
         # check if opinion value is valid
@@ -17,7 +18,7 @@ mutable struct Agent
         if inclin_interact < 0
             error("invalid value for inclination to interact")
         end
-        new(opinion, inclin_interact, opinion, check_regularity, true, Array{Tweet, 1}(undef, 0))
+        new(opinion, inclin_interact, opinion, check_regularity, true, 0, Array{Tweet, 1}(undef, 0))
     end
 end
 
@@ -65,11 +66,11 @@ function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thre
     end
 end
 
-function update_check_regularity!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3)
+function update_check_regularity!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3, decrease_factor::AbstractFloat=0.9)
     if (abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) > opinion_thresh)
-        agent_list[agent].check_regularity = 0.95 * agent_list[agent].check_regularity
+        agent_list[agent].check_regularity = decrease_factor * agent_list[agent].check_regularity
     else
-        agent_list[agent].check_regularity = 1
+        agent_list[agent].check_regularity = 1.0
     end
 end
 
@@ -85,7 +86,7 @@ end
 function like()
 end
 
-function drop_worst_input(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.5)
+function drop_worst_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.5)
     # look for current input tweets that have too different opinion compared to own
     # and remove them if source agent opinion is also too different
     for tweet in agent_list[agent].feed
@@ -97,7 +98,7 @@ function drop_worst_input(graph::AbstractGraph, agent_list::AbstractArray, agent
     end
 end
 
-function add_input(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, new_input_count::Integer=4)
+function add_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, new_input_count::Integer=4)
     # neighbors of neighbors
     input_candidates = Integer[]
     for neighbor in inneighbors(graph, agent)
@@ -111,6 +112,7 @@ function add_input(graph::AbstractGraph, agent_list::AbstractArray, agent::Integ
         subset = shuffle(unique([i for i in input_candidates if length(findall(x -> x == i, input_candidates)) == w]))
         append!(input_queue, subset)
     end
+    input_queue = [elem for elem in input_queue if agent_list[elem].active]
     # add edges
     if (length(input_queue) - new_input_count) < 0
         new_input_count = length(input_queue)
@@ -118,6 +120,16 @@ function add_input(graph::AbstractGraph, agent_list::AbstractArray, agent::Integ
     for _ in 1:new_input_count
         add_edge!(graph, popfirst!(input_queue), agent)
     end
+end
+
+function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer)
+    agent_list[agent].active = false
+    agent_edges = [e for e in edges(g) if (src(e) == agent | dst(e) == agent)]
+    for e in agent_edges
+        rem_edge!(g, e)
+    end
+    empty!(agent_list[agent].feed)
+    return true
 end
 
 function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer)

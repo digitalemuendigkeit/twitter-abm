@@ -96,7 +96,9 @@ include("Simulation.jl")
 g = create_network(100, 10, 1)
 a = create_agents(g)
 
-result = simulate(g,a,100)
+result = simulate(g,a,10)
+
+sum([agent.active for agent in result[2]])/length(result[2])
 
 result[3]
 result
