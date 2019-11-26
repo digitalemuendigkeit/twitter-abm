@@ -122,17 +122,22 @@ function add_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Inte
     end
 end
 
-function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer)
+function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, agent::Integer)
     agent_list[agent].active = false
     agent_edges = [e for e in edges(g) if (src(e) == agent | dst(e) == agent)]
     for e in agent_edges
         rem_edge!(g, e)
     end
     empty!(agent_list[agent].feed)
+    for t in tweet_list
+        if t.source_agent == agent
+            t.weight = -1
+        end
+    end
     return true
 end
 
-function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer)
+function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Integer, agent::Integer)
     tweet_opinion = agent_list[agent].opinion + rand(-0.1:0.0000001:0.1)
     # upper opinion limit is 1
     if tweet_opinion > 1
@@ -141,7 +146,8 @@ function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::
     elseif tweet_opinion < -1
         tweet_opinion = -1.0
     end
-    tweet = Tweet(tweet_opinion, length(outneighbors(graph, agent)), agent)
+    tweet = Tweet(tweet_opinion, length(outneighbors(graph, agent)), agent, tick_nr)
+    push!(tweet_list, tweet)
     # send tweet to each outneighbor
     for neighbor in outneighbors(graph, agent)
         push!(agent_list[neighbor].feed, tweet)

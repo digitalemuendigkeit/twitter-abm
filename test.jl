@@ -101,6 +101,7 @@ result = simulate(g,a,10)
 sum([agent.active for agent in result[2]])/length(result[2])
 
 result[3]
+[t for t in result[3] if t.weight < 0]
 result
 
 using Plots
