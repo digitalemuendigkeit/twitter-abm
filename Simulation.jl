@@ -55,7 +55,7 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::Int64, 
             end
             update_feed!(agent_list, agent)
             update_check_regularity!(agent_list, agent)
-        else
+        elseif agent_list[agent].active
             agent_list[agent].inactive_ticks += 1
             if agent_list[agent].inactive_ticks > max_inactive_ticks
                 set_inactive!(graph, agent_list, agent)
