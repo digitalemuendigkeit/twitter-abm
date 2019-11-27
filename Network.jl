@@ -1,5 +1,6 @@
 using Random
 using LightGraphs
+using Distributed
 
 # this algorithm is modelled after the python networkx implementation:
 # https://github.com/networkx/networkx/blob/master/networkx/generators/random_graphs.py#L655
@@ -72,14 +73,17 @@ end
 #     end
 # end
 
-function update_network!(graph::AbstractGraph, agent_list::AbstractArray, initial_inputs::Integer=4, new_agent_count::Integer=4)
+function update_network!(graph::AbstractGraph, agent_list::AbstractArray, initial_inputs::Integer=10, new_agent_count::Integer=4)
     pref_attach_list = [src(e) for e in edges(graph) if agent_list[src(e)].active]
-    for _ in 1:new_agent_count
+
+    currentnewagent = nv(graph)
+
+    for i in 1:new_agent_count
         push!(agent_list, Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity()))
         add_vertex!(graph)
-        shuffle!(pref_attach_list)
-        for i in 1:initial_inputs
-            add_edge!(graph, nv(graph), pref_attach_list[i])
+        newNeighbors = shuffle(pref_attach_list)[1:initial_inputs]
+        for newNeighbor in newNeighbors
+            add_edge!(g,currentnewagent+i,newNeighbor)
         end
     end
 end

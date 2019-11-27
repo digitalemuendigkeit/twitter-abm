@@ -72,7 +72,7 @@ function log_network(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::I
     active_status = [a.active for a in agent_list]
     agent_indegrees = indegree(graph)
     return DataFrame(
-        TickNr = tick_nr, AgentID = 1:length(agent_list), 
+        TickNr = tick_nr, AgentID = 1:length(agent_list),
         Opinion = agent_opinions, Indegree = agent_indegrees, ActiveStatus = active_status
     )
 end
@@ -84,7 +84,7 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integ
     graph = deepcopy(graph)
     df = DataFrame(TickNr = Int64[], AgentID = Int64[], Opinion = Float64[], Indegree = Float64[], ActiveStatus = Bool[])
     for i in 1:n_iter
-        # update_network(graph,agent_list)
+        # update_network!(graph,agent_list)
         append!(df, tick!(graph, agent_list, tweet_list, i)[3])
         if i % ceil(n_iter / 10) == 0
             print(".")
@@ -129,11 +129,11 @@ function visualize_opinionspread(df::DataFrame, agent_count::Int64, iterations::
 
     # Build the 3D Histogram
     persp3Drgl(
-        x=0: 
-            (nrow(histarraymatrix) - 1), y = seq(-1,1, by=0.1), 
-            contour=FALSE, z = histarraymatrix, 
+        x=0:
+            (nrow(histarraymatrix) - 1), y = seq(-1,1, by=0.1),
+            contour=FALSE, z = histarraymatrix,
             box=FALSE, shade=0.1,
-            xlab=\"\", ylab=\"\", zlab=\"\",  
+            xlab=\"\", ylab=\"\", zlab=\"\",
             col=viridis(n=2000, direction = -1), colkey=FALSE, axes=FALSE
         )
 
