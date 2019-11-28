@@ -1,5 +1,6 @@
 using Statistics
 using LightGraphs
+using StatsBase
 
 mutable struct Agent
     opinion::AbstractFloat
@@ -104,15 +105,10 @@ function add_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Inte
     for neighbor in inneighbors(graph, agent)
         append!(input_candidates, setdiff(inneighbors(graph, neighbor), inneighbors(graph, agent)))
     end
-    # occurrence counts of agents in input_candidates in reverse order
-    weights = sort(unique([length(findall(x -> x == i, input_candidates)) for i in input_candidates]), rev=true)
-    # final shuffled input queue
-    input_queue = Integer[]
-    for w in weights
-        subset = shuffle(unique([i for i in input_candidates if length(findall(x -> x == i, input_candidates)) == w]))
-        append!(input_queue, subset)
-    end
-    input_queue = [elem for elem in input_queue if agent_list[elem].active]
+
+    shuffle!(input_candidates)
+    # Order neighbors by frequency of occurence in input_candidates descending
+    input_queue = first.(sort(collect(countmap(input_candidates)), by = last, rev=true))
     # add edges
     if (length(input_queue) - new_input_count) < 0
         new_input_count = length(input_queue)
@@ -124,9 +120,9 @@ end
 
 function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, agent::Integer)
     agent_list[agent].active = false
-    agent_edges = [e for e in edges(g) if (src(e) == agent | dst(e) == agent)]
+    agent_edges = [e for e in edges(graph) if (src(e) == agent || dst(e) == agent)]
     for e in agent_edges
-        rem_edge!(g, e)
+        rem_edge!(graph, e)
     end
     empty!(agent_list[agent].feed)
     for t in tweet_list
@@ -160,9 +156,16 @@ function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_l
 end
 
 function update_feed!(agent_list::AbstractArray, agent::Integer, decay_factor::AbstractFloat=0.5)
-    for tweet in agent_list[agent].feed
-        tweet.weight = decay_factor * tweet.weight
+
+    deletedTweets = Integer[]
+    for (index,tweet) in enumerate(agent_list[agent].feed)
+        if tweet.weight == -1
+            push!(deletedTweets,index)
+        else
+            tweet.weight = decay_factor * tweet.weight
+        end
     end
+    deleteat!(agent_list[agent].feed,deletedTweets)
 end
 
 # suppress output of include()

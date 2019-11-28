@@ -2,6 +2,7 @@ using LightGraphs
 using DataFrames
 using Statistics
 using RCall
+using Distributed
 
 function generate_opinion()
     return rand(-1:0.0000001:1)
@@ -40,6 +41,7 @@ end
 function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Int64, max_inactive_ticks::Integer=2)
     for agent in shuffle(1:length(agent_list))
         if rand() < agent_list[agent].check_regularity && agent_list[agent].active
+            update_feed!(agent_list, agent)
             update_perceiv_publ_opinion!(graph, agent_list, agent)
             update_opinion!(agent_list, agent)
             # update_inclin_interact!(agent_list, agent)
@@ -53,7 +55,6 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::Abst
                 end
                 inclin_interact -= 1.0
             end
-            update_feed!(agent_list, agent)
             update_check_regularity!(agent_list, agent)
         elseif agent_list[agent].active
             agent_list[agent].inactive_ticks += 1

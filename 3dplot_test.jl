@@ -9,10 +9,10 @@ include("Network.jl")
 include("Simulation.jl")
 
 
-g = create_network(100, 10, 1)
+g = create_network(200, 10, 1)
 a = create_agents(g)
 
-result = simulate(g,a,200) 
+@time result = simulate(g,a,200)
 
 activityhist = Float64[]
 for agent in result[2]
