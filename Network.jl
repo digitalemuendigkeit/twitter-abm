@@ -72,7 +72,7 @@ end
 #     end
 # end
 
-function update_network!(graph::AbstractGraph, agent_list::AbstractArray, initial_inputs::Integer=4, new_agent_count::Integer=4)
+function update_network!(graph::AbstractGraph, agent_list::AbstractArray, new_agent_count::Integer=4, initial_inputs::Integer=4)
     pref_attach_list = [src(e) for e in edges(graph) if agent_list[src(e)].active]
     for _ in 1:new_agent_count
         push!(agent_list, Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity()))

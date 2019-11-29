@@ -14,11 +14,14 @@ a = create_agents(g)
 
 @time result = simulate(g,a,200)
 
+length([agent for agent in result[2] if agent.active==true])
+
 activityhist = Float64[]
 for agent in result[2]
-    append!(activityhist,agent.activity)
+    append!(activityhist,agent.active)
 end
 
+using Plots
 histogram(activityhist)
 activityhist
 
@@ -27,8 +30,7 @@ activityhist
 # Last param defines visualization method: 1=Build histograms, 2=Build lineplots
 visualize_opinionspread(result[1],100,200)
 
-# Export data for tests in RStudio
-z = DataFrame(reshape(result.Opinions,100,div(length(result.Opinions),100))) # Hardcoded int is agent_count
+z = result[1]
 @rput z
 R"save(z,file=\"data.Rda\")"
 
