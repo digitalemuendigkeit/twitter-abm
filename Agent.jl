@@ -10,6 +10,7 @@ mutable struct Agent
     active::Bool
     inactive_ticks::Integer
     feed::AbstractArray
+    liked_Tweets::AbstractArray
     function Agent(opinion, inclin_interact, check_regularity)
         # check if opinion value is valid
         if opinion < -1 || opinion > 1
@@ -19,7 +20,7 @@ mutable struct Agent
         if inclin_interact < 0
             error("invalid value for inclination to interact")
         end
-        new(opinion, inclin_interact, opinion, check_regularity, true, 0, Array{Tweet, 1}(undef, 0))
+        new(opinion, inclin_interact, opinion, check_regularity, true, 0, Array{Tweet, 1}(undef, 0), Array{Tweet, 1}(undef, 0))
     end
 end
 
@@ -85,6 +86,26 @@ function update_inclin_interact!(agent_list::AbstractArray, agent::Integer, base
 end
 
 function like()
+    for tweet in agent_list[agent].feed
+    if agent_list[agent].inclin_interact > rand()
+        if abs(tweet.opinion - agent_list[agent].opinion < 0.2) && !in(liked_Tweets, tweet)
+            append!(likeTweetQueue,tweet)
+        end
+    end
+    for tweet in likeTweetQueue
+        while agent_list[agent].inclin_interact > 0
+            current = pop!(likeTweetQueue)
+            current.like_count += 1
+            # send tweet to each outneighbor
+            for neighbor in outneighbors(graph, agent)
+                push!(agent_list[neighbor].feed, current)
+                if length(agent_list[neighbor].feed) > 10
+                    min_weight = minimum([t.weight for t in agent_list[neighbor].feed])
+                    del_idx = findfirst([t.weight == min_weight for t in agent_list[neighbor].feed])
+                    deleteat!(agent_list[neighbor].feed, del_idx)
+                end
+            end
+        end
 end
 
 function drop_worst_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.5)
