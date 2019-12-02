@@ -14,6 +14,12 @@ a = create_agents(g)
 
 @time result = simulate(g,a,200)
 
+rt_counts = [length(agent.retweeted_Tweets) for agent in result[2]]
+
+for r in sort(rt_counts)
+    print(r, "\n")
+end
+
 length([agent for agent in result[2] if agent.active==true])
 
 activityhist = Float64[]

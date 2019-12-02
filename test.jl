@@ -4,6 +4,14 @@ include("Tweet.jl")
 include("Network.jl")
 include("Simulation.jl")
 
+# unique! -> list of tweets
+tweet_1 = Tweet(generate_opinion(), 100, 1, 3)
+tweet_2 = Tweet(generate_opinion(), 100, 1, 3)
+tweet_3 = Tweet(generate_opinion(), 100, 1, 3)
+
+tweet_list = [tweet_1, tweet_2, tweet_3]
+push!(tweet_list, tweet_1)
+unique(tweet_list)
 
 # --- test agent creation ---#
 

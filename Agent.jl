@@ -11,6 +11,7 @@ mutable struct Agent
     inactive_ticks::Integer
     feed::AbstractArray
     liked_Tweets::AbstractArray
+    retweeted_Tweets::AbstractArray
     function Agent(opinion, inclin_interact, check_regularity)
         # check if opinion value is valid
         if opinion < -1 || opinion > 1
@@ -20,7 +21,10 @@ mutable struct Agent
         if inclin_interact < 0
             error("invalid value for inclination to interact")
         end
-        new(opinion, inclin_interact, opinion, check_regularity, true, 0, Array{Tweet, 1}(undef, 0), Array{Tweet, 1}(undef, 0))
+        new(
+            opinion, inclin_interact, opinion, check_regularity, true, 0, 
+            Array{Tweet, 1}(undef, 0), Array{Tweet, 1}(undef, 0), Array{Tweet, 1}(undef, 0)
+        )
     end
 end
 
@@ -147,6 +151,19 @@ function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, tweet_li
     return true
 end
 
+function retweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.1)
+    for tweet in agent_list[agent].feed
+        if abs(agent_list[agent].opinion - tweet.opinion) <= opinion_thresh && !in(tweet, agent_list[agent].retweeted_Tweets)
+            tweet.weight *= 1.01
+            push!(agent_list[agent].retweeted_Tweets, tweet)
+            for neighbor in outneighbors(graph, agent)
+                push!(agent_list[neighbor].feed, tweet)
+            end
+            break
+        end
+    end
+end
+
 function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Integer, agent::Integer)
     tweet_opinion = agent_list[agent].opinion + rand(-0.1:0.0000001:0.1)
     # upper opinion limit is 1
@@ -165,7 +182,7 @@ function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_l
 end
 
 function update_feed!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, decay_factor::AbstractFloat=0.5)
-
+    unique!(agent_list[agent].feed)
     deletedTweets = Integer[]
     for (index,tweet) in enumerate(agent_list[agent].feed)
         if tweet.weight == -1 || !in(tweet.source_agent, inneighbors(graph, agent))
