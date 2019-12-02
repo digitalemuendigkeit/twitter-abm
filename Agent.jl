@@ -58,7 +58,6 @@ function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thre
             base_weight * agent_list[agent].opinion +
             (1 - base_weight) * agent_list[agent].perceiv_publ_opinion
         )
-
     else
         agent_list[agent].opinion = (2 - base_weight) * agent_list[agent].opinion
         if agent_list[agent].opinion > 1
@@ -155,6 +154,7 @@ function retweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Intege
     for tweet in agent_list[agent].feed
         if abs(agent_list[agent].opinion - tweet.opinion) <= opinion_thresh && !in(tweet, agent_list[agent].retweeted_Tweets)
             tweet.weight *= 1.01
+            tweet.retweet_count += 1
             push!(agent_list[agent].retweeted_Tweets, tweet)
             for neighbor in outneighbors(graph, agent)
                 push!(agent_list[neighbor].feed, tweet)
