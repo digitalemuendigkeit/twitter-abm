@@ -45,7 +45,7 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::Abst
             update_perceiv_publ_opinion!(graph, agent_list, agent)
             update_opinion!(agent_list, agent)
             # update_inclin_interact!(agent_list, agent)
-            # like()
+            like(agent_list,agent)
             drop_input!(graph, agent_list, agent)
             add_input!(graph, agent_list, agent)
             inclin_interact = deepcopy(agent_list[agent].inclin_interact)
