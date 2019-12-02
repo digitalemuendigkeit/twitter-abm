@@ -54,10 +54,7 @@ function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thre
             base_weight * agent_list[agent].opinion +
             (1 - base_weight) * agent_list[agent].perceiv_publ_opinion
         )
-        agent_list[agent].check_regularity = 1.2 * agent_list[agent].check_regularity
-        if agent_list[agent].check_regularity > 1
-            agent_list[agent].check_regularity = 1
-        end
+
     else
         agent_list[agent].opinion = 1.02 * agent_list[agent].opinion
         if agent_list[agent].opinion > 1
@@ -85,30 +82,26 @@ function update_inclin_interact!(agent_list::AbstractArray, agent::Integer, base
     )
 end
 
-function like()
-    for tweet in agent_list[agent].feed
-    if agent_list[agent].inclin_interact > rand()
-        if abs(tweet.opinion - agent_list[agent].opinion < 0.2) && !in(liked_Tweets, tweet)
-            append!(likeTweetQueue,tweet)
-        end
-    end
-    for tweet in likeTweetQueue
-        while agent_list[agent].inclin_interact > 0
-            current = pop!(likeTweetQueue)
-            current.like_count += 1
-            # send tweet to each outneighbor
-            for neighbor in outneighbors(graph, agent)
-                push!(agent_list[neighbor].feed, current)
-                if length(agent_list[neighbor].feed) > 10
-                    min_weight = minimum([t.weight for t in agent_list[neighbor].feed])
-                    del_idx = findfirst([t.weight == min_weight for t in agent_list[neighbor].feed])
-                    deleteat!(agent_list[neighbor].feed, del_idx)
-                end
+function like(agent_list::AbstractArray, agent::Integer)
+    inclin_interact = deepcopy(agent_list[agent].inclin_interact)
+    i = 1
+    while agent_list[agent].inclin_interact > rand()
+        if i < length(agent_list[agent].feed)
+            if abs(agent_list[agent].feed[i].opinion - agent_list[agent].opinion < 0.2) && !in(agent_list[agent].feed[i], agent_list[agent].liked_Tweets)
+                agent_list[agent].feed[i].like_count += 1
+                agent_list[agent].feed[i].weight *= 1.01
+                push!(agent_list[agent].liked_Tweets, agent_list[agent].feed[i])
             end
+        else
+            break
         end
+
+        i += 1
+        inclin_interact -= 1
+    end
 end
 
-function drop_worst_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.5)
+function drop_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.5)
     # look for current input tweets that have too different opinion compared to own
     # and remove them if source agent opinion is also too different
     for tweet in agent_list[agent].feed
@@ -168,25 +161,24 @@ function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_l
     # send tweet to each outneighbor
     for neighbor in outneighbors(graph, agent)
         push!(agent_list[neighbor].feed, tweet)
-        if length(agent_list[neighbor].feed) > 10
-            min_weight = minimum([t.weight for t in agent_list[neighbor].feed])
-            del_idx = findfirst([t.weight == min_weight for t in agent_list[neighbor].feed])
-            deleteat!(agent_list[neighbor].feed, del_idx)
-        end
     end
 end
 
-function update_feed!(agent_list::AbstractArray, agent::Integer, decay_factor::AbstractFloat=0.5)
+function update_feed!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, decay_factor::AbstractFloat=0.5)
 
     deletedTweets = Integer[]
     for (index,tweet) in enumerate(agent_list[agent].feed)
-        if tweet.weight == -1
+        if tweet.weight == -1 || !in(tweet.source_agent, inneighbors(graph, agent))
             push!(deletedTweets,index)
         else
             tweet.weight = decay_factor * tweet.weight
         end
     end
     deleteat!(agent_list[agent].feed,deletedTweets)
+    sort!(agent_list[agent].feed, lt=<, rev=true)
+    if length(agent_list[agent].feed) > 10
+        agent_list[agent].feed = agent_list[agent].feed[1:10]
+    end
 end
 
 # suppress output of include()

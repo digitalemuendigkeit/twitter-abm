@@ -41,12 +41,12 @@ end
 function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Int64, growth::Integer, max_inactive_ticks::Integer=2)
     for agent in shuffle(1:length(agent_list))
         if rand() < agent_list[agent].check_regularity && agent_list[agent].active
-            update_feed!(agent_list, agent)
+            update_feed!(graph, agent_list, agent)
             update_perceiv_publ_opinion!(graph, agent_list, agent)
             update_opinion!(agent_list, agent)
             # update_inclin_interact!(agent_list, agent)
             # like()
-            drop_worst_input!(graph, agent_list, agent)
+            drop_input!(graph, agent_list, agent)
             add_input!(graph, agent_list, agent)
             inclin_interact = deepcopy(agent_list[agent].inclin_interact)
             while inclin_interact > 0

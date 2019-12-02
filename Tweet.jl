@@ -18,5 +18,7 @@ mutable struct Tweet
     end
 end
 
+Base.:<(x::Tweet, y::Tweet) = x.weight < y.weight
+
 # suppress output of include()
 ;
