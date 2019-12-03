@@ -3,44 +3,45 @@ using DataFrames
 using Statistics
 using RCall
 using Distributed
+using Random
 
-function generate_opinion()
-    return rand(-1:0.0000001:1)
+function generate_opinion(rng::AbstractRNG=MersenneTwister(0))
+    return rand(rng, -1:0.0000001:1)
 end
 
 # this function was adapted from:
 # https://www.johndcook.com/julia_rng.html
-function generate_inclin_interact(lambda=log(25))
+function generate_inclin_interact(rng::AbstractRNG=MersenneTwister(0), lambda=log(25))
     if lambda <= 0.0
         error("mean must be positive")
     end
-    -(1 / lambda) * log(rand())
+    -(1 / lambda) * log(rand(rng))
 end
 
-function generate_check_regularity()
-    return 1 - (rand() / 4)^2
+function generate_check_regularity(rng::AbstractRNG=MersenneTwister(0))
+    return 1 - (rand(rng) / 4)^2
 end
 
-function create_agents(graph::AbstractGraph)
+function create_agents(graph::AbstractGraph, rng::AbstractRNG=MersenneTwister(0))
     agent_list = Array{Agent, 1}(undef, length(vertices(graph)))
     for agent in 1:length(agent_list)
-        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity())
+        agent_list[agent] = Agent(generate_opinion(rng), generate_inclin_interact(rng), generate_check_regularity(rng))
     end
     return agent_list
 end
 
-function create_agents(agent_count::Integer)
+function create_agents(agent_count::Integer, rng::AbstractRNG=MersenneTwister(0))
     agent_list = Array{Agent, 1}(undef, agent_count)
     for agent in 1:length(agent_list)
-        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity())
+        agent_list[agent] = Agent(generate_opinion(rng), generate_inclin_interact(rng), generate_check_regularity(rng))
     end
     return agent_list
 end
 
 # simulation step
-function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Int64, growth::Integer, max_inactive_ticks::Integer=2)
-    for agent in shuffle(1:length(agent_list))
-        if rand() < agent_list[agent].check_regularity && agent_list[agent].active
+function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Int64, rng::AbstractRNG=MersenneTwister(0), growth::Integer=4, max_inactive_ticks::Integer=2)
+    for agent in shuffle(rng, 1:length(agent_list))
+        if rand(rng) < agent_list[agent].check_regularity && agent_list[agent].active
             update_feed!(graph, agent_list, agent)
             update_perceiv_publ_opinion!(graph, agent_list, agent)
             update_opinion!(agent_list, agent)
@@ -51,7 +52,7 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::Abst
             add_input!(graph, agent_list, agent)
             inclin_interact = deepcopy(agent_list[agent].inclin_interact)
             while inclin_interact > 0
-                if rand() < inclin_interact
+                if rand(rng) < inclin_interact
                     publish_tweet!(graph, agent_list, tweet_list, tick_nr, agent)
                 end
                 inclin_interact -= 1.0
@@ -85,7 +86,7 @@ function log_network(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::I
 end
 
 # the actual simulation
-function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integer, growth::Integer=4)
+function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integer, rng::AbstractRNG=MersenneTwister(0), growth::Integer=4)
     agent_list = deepcopy(agent_list)
     tweet_list = Array{Tweet, 1}(undef, 0)
     graph = deepcopy(graph)
@@ -96,8 +97,7 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integ
         Indegree = Float64[], ActiveStatus = Bool[]
     )
     for i in 1:n_iter
-        # update_network(graph,agent_list)
-        append!(df, tick!(graph, agent_list, tweet_list, i, growth)[3])
+        append!(df, tick!(graph, agent_list, tweet_list, i, rng, growth)[3])
         if i % ceil(n_iter / 10) == 0
             print(".")
         end

@@ -51,7 +51,7 @@ function update_perceiv_publ_opinion!(graph::AbstractGraph, agent_list::Abstract
     agent_list[agent].perceiv_publ_opinion = mean([input_opinion_mean, feed_opinion_mean])
 end
 
-function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.1, base_weight::AbstractFloat=0.99)
+function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3, base_weight::AbstractFloat=0.99)
     # weighted mean of own opinion and perceived public opinion
     if (abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) < opinion_thresh)
         agent_list[agent].opinion = (

@@ -132,10 +132,14 @@ include("Tweet.jl")
 include("Network.jl")
 include("Simulation.jl")
 
-g = create_network(200, 15, 0)
-a = create_agents(g)
+using Random
 
-df, agent_list, tweet_list, graph = simulate(g, a, 100)
+rng = MersenneTwister(2)
+
+g = create_network(200, 15, 0)
+a = create_agents(g, rng)
+
+df, agent_list, tweet_list, graph = simulate(g, a, 100, rng)
 
 using CSV
 
