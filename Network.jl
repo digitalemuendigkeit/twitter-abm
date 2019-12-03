@@ -3,11 +3,10 @@ using LightGraphs
 
 # this algorithm is modelled after the python networkx implementation:
 # https://github.com/networkx/networkx/blob/master/networkx/generators/random_graphs.py#L655
-function create_network(n::Int64, m0::Int64, seed::Int64=0)
+function create_network(n::Int64, m0::Int64)
     # check if n is smaller than m0
     if n >= m0
         # setup
-        Random.seed!(seed)
         g = SimpleDiGraph(n)
         # set of nodes to connect to
         targets = collect(1:m0)
@@ -43,12 +42,6 @@ function update_network!(graph::AbstractGraph, agent_list::AbstractArray, new_ag
         end
     end
 end
-
-# function getNewNeighbors(g::AbstractGraph, v::Integer)
-#     candidates = shuffle(setdiff([1:(v - 1); (v + 1):nv(g)], inneighbors(g, v)))
-#     return candidates
-# end
-
 
 # suppress output of include()
 ;

@@ -136,10 +136,12 @@ using Random
 
 rng = MersenneTwister(2)
 
-g = create_network(200, 15, 0)
-a = create_agents(g, rng)
+Random.seed!(2)
 
-df, agent_list, tweet_list, graph = simulate(g, a, 100, rng)
+g = create_network(200, 15)
+a = create_agents(g)
+
+df, agent_list, tweet_list, graph = simulate(g, a, 100)
 
 using CSV
 

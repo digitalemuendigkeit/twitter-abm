@@ -29,72 +29,81 @@ mutable struct Agent
 end
 
 function update_perceiv_publ_opinion!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer)
+    this_agent = agent_list[agent]
     # get neighborhood opinion as baseline
     input = outneighbors(graph, agent)
     if length(input) != 0
         input_opinion_mean = mean([agent_list[input_agent].opinion for input_agent in input])
     else
-        input_opinion_mean = agent_list[agent].opinion
+        input_opinion_mean = this_agent.opinion
     end
     # compute feed opinion
-    feed_opinions = [tweet.opinion for tweet in agent_list[agent].feed]
-    feed_weights = [tweet.weight for tweet in agent_list[agent].feed]
+    feed_opinions = [tweet.opinion for tweet in this_agent.feed]
+    feed_weights = [tweet.weight for tweet in this_agent.feed]
     if length(feed_opinions) > 0
         feed_opinion_mean = (
             sum([opinion * weight for (opinion, weight) in zip(feed_opinions, feed_weights)]) /
             sum(feed_weights)
         )
     else
-        feed_opinion_mean = agent_list[agent].opinion
+        feed_opinion_mean = this_agent.opinion
     end
     # perceived public opinion is the mean between the feed and neighborhood opinion
-    agent_list[agent].perceiv_publ_opinion = mean([input_opinion_mean, feed_opinion_mean])
+    this_agent.perceiv_publ_opinion = mean([input_opinion_mean, feed_opinion_mean])
 end
 
 function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3, base_weight::AbstractFloat=0.99)
+    this_agent = agent_list[agent]
     # weighted mean of own opinion and perceived public opinion
-    if (abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) < opinion_thresh)
-        agent_list[agent].opinion = (
-            base_weight * agent_list[agent].opinion +
-            (1 - base_weight) * agent_list[agent].perceiv_publ_opinion
+    if (abs(this_agent.opinion - this_agent.perceiv_publ_opinion) < opinion_thresh)
+        this_agent.opinion = (
+            base_weight * this_agent.opinion +
+            (1 - base_weight) * this_agent.perceiv_publ_opinion
         )
     # backfire effect?
     else
-        agent_list[agent].opinion = (2 - base_weight) * agent_list[agent].opinion
-        if agent_list[agent].opinion > 1
-            agent_list[agent].opinion = 1
-        elseif agent_list[agent].opinion < -1
-            agent_list[agent].opinion = -1
+        if (this_agent.opinion * this_agent.perceiv_publ_opinion > 0) && (abs(this_agent.opinion) - abs(this_agent.perceiv_publ_opinion) < 0)
+            this_agent.opinion = base_weight * this_agent.opinion
+        else
+            this_agent.opinion = (2 - base_weight) * this_agent.opinion
+        end
+        if this_agent.opinion > 1
+            this_agent.opinion = 1
+        elseif this_agent.opinion < -1
+            this_agent.opinion = -1
         end
     end
 end
 
 function update_check_regularity!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3, decrease_factor::AbstractFloat=0.9)
-    if (abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) > opinion_thresh)
-        agent_list[agent].check_regularity = decrease_factor * agent_list[agent].check_regularity
+    this_agent = agent_list[agent]
+    if (abs(this_agent.opinion - this_agent.perceiv_publ_opinion) > opinion_thresh)
+        this_agent.check_regularity = decrease_factor * this_agent.check_regularity
     else
-        agent_list[agent].check_regularity = 1.0
+        this_agent.check_regularity = 1.0
     end
 end
 
 function update_inclin_interact!(agent_list::AbstractArray, agent::Integer, base_weight::AbstractFloat=0.9)
+    this_agent = agent_list[agent]
     # weighted mean of current inclination to interact and
     # absolute difference between own and perceived public opinion
-    agent_list[agent].inclin_interact = (
-        (1 - base_weight) * abs(agent_list[agent].opinion - agent_list[agent].perceiv_publ_opinion) +
-        base_weight * agent_list[agent].inclin_interact
+    this_agent.inclin_interact = (
+        (1 - base_weight) * abs(this_agent.opinion - this_agent.perceiv_publ_opinion) +
+        base_weight * this_agent.inclin_interact
     )
 end
 
 function like(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.2)
-    inclin_interact = deepcopy(agent_list[agent].inclin_interact)
+    this_agent = agent_list[agent]
+    inclin_interact = deepcopy(this_agent.inclin_interact)
     i = 1
-    while agent_list[agent].inclin_interact > rand()
-        if i < length(agent_list[agent].feed)
-            if (abs(agent_list[agent].feed[i].opinion - agent_list[agent].opinion) < opinion_thresh) && !(agent_list[agent].feed[i] in agent_list[agent].liked_Tweets)
-                agent_list[agent].feed[i].like_count += 1
-                agent_list[agent].feed[i].weight *= 1.01
-                push!(agent_list[agent].liked_Tweets, agent_list[agent].feed[i])
+    while inclin_interact > rand()
+        if i < length(this_agent.feed)
+            if (abs(this_agent.feed[i].opinion - this_agent.opinion) < opinion_thresh) && !(this_agent.feed[i] in this_agent.liked_Tweets)
+                this_agent.feed[i].like_count += 1
+                this_agent.feed[i].weight *= 1.01
+                push!(this_agent.liked_Tweets, this_agent.feed[i])
             end
         else
             break
@@ -106,11 +115,12 @@ function like(agent_list::AbstractArray, agent::Integer, opinion_thresh::Abstrac
 end
 
 function drop_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.5)
+    this_agent = agent_list[agent]
     # look for current input tweets that have too different opinion compared to own
     # and remove them if source agent opinion is also too different
-    for tweet in agent_list[agent].feed
-        if abs(tweet.opinion - agent_list[agent].opinion) > opinion_thresh
-            if abs(agent_list[tweet.source_agent].opinion - agent_list[agent].opinion) > opinion_thresh
+    for tweet in this_agent.feed
+        if abs(tweet.opinion - this_agent.opinion) > opinion_thresh
+            if abs(agent_list[tweet.source_agent].opinion - this_agent.opinion) > opinion_thresh
                 rem_edge!(graph, tweet.source_agent, agent)
             end
         end
@@ -137,12 +147,13 @@ function add_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Inte
 end
 
 function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, agent::Integer)
-    agent_list[agent].active = false
+    this_agent = agent_list[agent]
+    this_agent.active = false
     agent_edges = [e for e in edges(graph) if (src(e) == agent || dst(e) == agent)]
     for e in agent_edges
         rem_edge!(graph, e)
     end
-    empty!(agent_list[agent].feed)
+    empty!(this_agent.feed)
     for t in tweet_list
         if t.source_agent == agent
             t.weight = -1
@@ -152,11 +163,12 @@ function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, tweet_li
 end
 
 function retweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.1)
-    for tweet in agent_list[agent].feed
-        if (abs(agent_list[agent].opinion - tweet.opinion) <= opinion_thresh) && !(tweet in agent_list[agent].retweeted_Tweets)
+    this_agent = agent_list[agent]
+    for tweet in this_agent.feed
+        if (abs(this_agent.opinion - tweet.opinion) <= opinion_thresh) && !(tweet in this_agent.retweeted_Tweets)
             tweet.weight *= 1.01
             tweet.retweet_count += 1
-            push!(agent_list[agent].retweeted_Tweets, tweet)
+            push!(this_agent.retweeted_Tweets, tweet)
             for neighbor in outneighbors(graph, agent)
                 push!(agent_list[neighbor].feed, tweet)
             end
@@ -166,7 +178,8 @@ function retweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Intege
 end
 
 function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Integer, agent::Integer)
-    tweet_opinion = agent_list[agent].opinion + rand(-0.1:0.0000001:0.1)
+    this_agent = agent_list[agent]
+    tweet_opinion = this_agent.opinion + rand(-0.1:0.0000001:0.1)
     # upper opinion limit is 1
     if tweet_opinion > 1
         tweet_opinion = 1.0
@@ -183,19 +196,20 @@ function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_l
 end
 
 function update_feed!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, decay_factor::AbstractFloat=0.5)
-    unique!(agent_list[agent].feed)
+    this_agent = agent_list[agent]
+    unique!(this_agent.feed)
     deletedTweets = Integer[]
-    for (index,tweet) in enumerate(agent_list[agent].feed)
+    for (index,tweet) in enumerate(this_agent.feed)
         if tweet.weight == -1 || !(tweet.source_agent in inneighbors(graph, agent))
             push!(deletedTweets,index)
         else
             tweet.weight = decay_factor * tweet.weight
         end
     end
-    deleteat!(agent_list[agent].feed,deletedTweets)
-    sort!(agent_list[agent].feed, lt=<, rev=true)
-    if length(agent_list[agent].feed) > 10
-        agent_list[agent].feed = agent_list[agent].feed[1:10]
+    deleteat!(this_agent.feed,deletedTweets)
+    sort!(this_agent.feed, lt=<, rev=true)
+    if length(this_agent.feed) > 10
+        this_agent.feed = this_agent.feed[1:10]
     end
 end
 
