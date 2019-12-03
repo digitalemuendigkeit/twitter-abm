@@ -58,6 +58,7 @@ function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thre
             base_weight * agent_list[agent].opinion +
             (1 - base_weight) * agent_list[agent].perceiv_publ_opinion
         )
+    # backfire effect?
     else
         agent_list[agent].opinion = (2 - base_weight) * agent_list[agent].opinion
         if agent_list[agent].opinion > 1
@@ -85,12 +86,12 @@ function update_inclin_interact!(agent_list::AbstractArray, agent::Integer, base
     )
 end
 
-function like(agent_list::AbstractArray, agent::Integer)
+function like(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.2)
     inclin_interact = deepcopy(agent_list[agent].inclin_interact)
     i = 1
     while agent_list[agent].inclin_interact > rand()
         if i < length(agent_list[agent].feed)
-            if abs(agent_list[agent].feed[i].opinion - agent_list[agent].opinion < 0.2) && !in(agent_list[agent].feed[i], agent_list[agent].liked_Tweets)
+            if (abs(agent_list[agent].feed[i].opinion - agent_list[agent].opinion) < opinion_thresh) && !(agent_list[agent].feed[i] in agent_list[agent].liked_Tweets)
                 agent_list[agent].feed[i].like_count += 1
                 agent_list[agent].feed[i].weight *= 1.01
                 push!(agent_list[agent].liked_Tweets, agent_list[agent].feed[i])
@@ -125,7 +126,7 @@ function add_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Inte
 
     shuffle!(input_candidates)
     # Order neighbors by frequency of occurence in input_candidates descending
-    input_queue = first.(sort(collect(countmap(input_candidates)), by = last, rev=true))
+    input_queue = first.(sort(collect(countmap(input_candidates)), by=last, rev=true))
     # add edges
     if (length(input_queue) - new_input_count) < 0
         new_input_count = length(input_queue)
@@ -152,7 +153,7 @@ end
 
 function retweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.1)
     for tweet in agent_list[agent].feed
-        if abs(agent_list[agent].opinion - tweet.opinion) <= opinion_thresh && !in(tweet, agent_list[agent].retweeted_Tweets)
+        if (abs(agent_list[agent].opinion - tweet.opinion) <= opinion_thresh) && !(tweet in agent_list[agent].retweeted_Tweets)
             tweet.weight *= 1.01
             tweet.retweet_count += 1
             push!(agent_list[agent].retweeted_Tweets, tweet)
@@ -185,7 +186,7 @@ function update_feed!(graph::AbstractGraph, agent_list::AbstractArray, agent::In
     unique!(agent_list[agent].feed)
     deletedTweets = Integer[]
     for (index,tweet) in enumerate(agent_list[agent].feed)
-        if tweet.weight == -1 || !in(tweet.source_agent, inneighbors(graph, agent))
+        if tweet.weight == -1 || !(tweet.source_agent in inneighbors(graph, agent))
             push!(deletedTweets,index)
         else
             tweet.weight = decay_factor * tweet.weight

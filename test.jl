@@ -125,3 +125,18 @@ plot(collect(1:size(result[3],1)),result[3].mean)
 plot(collect(1:size(result[3],1)),result[3].sd)
 
 [a.opinion for a in result[2]]
+
+# load all scripts
+include("Agent.jl")
+include("Tweet.jl")
+include("Network.jl")
+include("Simulation.jl")
+
+g = create_network(200, 15, 0)
+a = create_agents(g)
+
+df, agent_list, tweet_list, graph = simulate(g, a, 100)
+
+using CSV
+
+CSV.write("bla3.csv", df)
