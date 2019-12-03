@@ -3,7 +3,9 @@ using LightGraphs
 
 # this algorithm is modelled after the python networkx implementation:
 # https://github.com/networkx/networkx/blob/master/networkx/generators/random_graphs.py#L655
-function create_network(n::Int64, m0::Int64)
+function create_network(
+    n::Int64, m0::Int64
+)
     # check if n is smaller than m0
     if n >= m0
         # setup
@@ -20,7 +22,6 @@ function create_network(n::Int64, m0::Int64)
                 add_edge!(g, e[1], e[2])
             end
             append!(repeated_nodes, targets)
-            append!(repeated_nodes, fill(source, m0))
             targets = shuffle(repeated_nodes)[1:m0]
             source += 1
         end
@@ -31,7 +32,10 @@ function create_network(n::Int64, m0::Int64)
 end
 
 
-function update_network!(graph::AbstractGraph, agent_list::AbstractArray, new_agent_count::Integer=4, initial_inputs::Integer=4)
+function update_network!(
+    graph::AbstractGraph, agent_list::AbstractArray, 
+    new_agent_count::Integer=4, initial_inputs::Integer=4
+)
     pref_attach_list = [src(e) for e in edges(graph) if agent_list[src(e)].active]
     for _ in 1:new_agent_count
         push!(agent_list, Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity()))

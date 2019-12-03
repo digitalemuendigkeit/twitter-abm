@@ -3,15 +3,15 @@ using LightGraphs
 using StatsBase
 
 mutable struct Agent
-    opinion::AbstractFloat
-    inclin_interact::AbstractFloat
-    perceiv_publ_opinion::AbstractFloat
-    check_regularity::AbstractFloat
+    opinion::Float64
+    inclin_interact::Float64
+    perceiv_publ_opinion::Float64
+    check_regularity::Float64
     active::Bool
-    inactive_ticks::Integer
-    feed::AbstractArray
-    liked_Tweets::AbstractArray
-    retweeted_Tweets::AbstractArray
+    inactive_ticks::Int16
+    feed::Array{Tweet, 1}
+    liked_Tweets::Array{Tweet, 1}
+    retweeted_Tweets::Array{Tweet, 1}
     function Agent(opinion, inclin_interact, check_regularity)
         # check if opinion value is valid
         if opinion < -1 || opinion > 1
@@ -22,13 +22,22 @@ mutable struct Agent
             error("invalid value for inclination to interact")
         end
         new(
-            opinion, inclin_interact, opinion, check_regularity, true, 0, 
-            Array{Tweet, 1}(undef, 0), Array{Tweet, 1}(undef, 0), Array{Tweet, 1}(undef, 0)
+            opinion, 
+            inclin_interact, 
+            opinion, 
+            check_regularity, 
+            true, 
+            0, 
+            Array{Tweet, 1}(undef, 0), 
+            Array{Tweet, 1}(undef, 0), 
+            Array{Tweet, 1}(undef, 0)
         )
     end
 end
 
-function update_perceiv_publ_opinion!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer)
+function update_perceiv_publ_opinion!(
+    graph::AbstractGraph, agent_list::AbstractArray, agent::Integer
+)
     this_agent = agent_list[agent]
     # get neighborhood opinion as baseline
     input = outneighbors(graph, agent)
@@ -52,17 +61,20 @@ function update_perceiv_publ_opinion!(graph::AbstractGraph, agent_list::Abstract
     this_agent.perceiv_publ_opinion = mean([input_opinion_mean, feed_opinion_mean])
 end
 
-function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3, base_weight::AbstractFloat=0.99)
+function update_opinion!(
+    agent_list::AbstractArray, agent::Integer,
+    opinion_thresh::AbstractFloat=0.3, base_weight::AbstractFloat=0.99
+)
     this_agent = agent_list[agent]
     # weighted mean of own opinion and perceived public opinion
     if (abs(this_agent.opinion - this_agent.perceiv_publ_opinion) < opinion_thresh)
         this_agent.opinion = (
-            base_weight * this_agent.opinion +
-            (1 - base_weight) * this_agent.perceiv_publ_opinion
+            base_weight * this_agent.opinion 
+            + (1 - base_weight) * this_agent.perceiv_publ_opinion
         )
-    # backfire effect?
     else
-        if (this_agent.opinion * this_agent.perceiv_publ_opinion > 0) && (abs(this_agent.opinion) - abs(this_agent.perceiv_publ_opinion) < 0)
+        if ((this_agent.opinion * this_agent.perceiv_publ_opinion > 0) 
+            && (abs(this_agent.opinion) - abs(this_agent.perceiv_publ_opinion) < 0))
             this_agent.opinion = base_weight * this_agent.opinion
         else
             this_agent.opinion = (2 - base_weight) * this_agent.opinion
@@ -75,7 +87,10 @@ function update_opinion!(agent_list::AbstractArray, agent::Integer, opinion_thre
     end
 end
 
-function update_check_regularity!(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.3, decrease_factor::AbstractFloat=0.9)
+function update_check_regularity!(
+    agent_list::AbstractArray, agent::Integer, 
+    opinion_thresh::AbstractFloat=0.3, decrease_factor::AbstractFloat=0.9
+)
     this_agent = agent_list[agent]
     if (abs(this_agent.opinion - this_agent.perceiv_publ_opinion) > opinion_thresh)
         this_agent.check_regularity = decrease_factor * this_agent.check_regularity
@@ -84,23 +99,17 @@ function update_check_regularity!(agent_list::AbstractArray, agent::Integer, opi
     end
 end
 
-function update_inclin_interact!(agent_list::AbstractArray, agent::Integer, base_weight::AbstractFloat=0.9)
-    this_agent = agent_list[agent]
-    # weighted mean of current inclination to interact and
-    # absolute difference between own and perceived public opinion
-    this_agent.inclin_interact = (
-        (1 - base_weight) * abs(this_agent.opinion - this_agent.perceiv_publ_opinion) +
-        base_weight * this_agent.inclin_interact
-    )
-end
-
-function like(agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.2)
+function like(
+    agent_list::AbstractArray, agent::Integer, 
+    opinion_thresh::AbstractFloat=0.2
+)
     this_agent = agent_list[agent]
     inclin_interact = deepcopy(this_agent.inclin_interact)
     i = 1
     while inclin_interact > rand()
         if i < length(this_agent.feed)
-            if (abs(this_agent.feed[i].opinion - this_agent.opinion) < opinion_thresh) && !(this_agent.feed[i] in this_agent.liked_Tweets)
+            if ((abs(this_agent.feed[i].opinion - this_agent.opinion) < opinion_thresh) 
+                && !(this_agent.feed[i] in this_agent.liked_Tweets))
                 this_agent.feed[i].like_count += 1
                 this_agent.feed[i].weight *= 1.01
                 push!(this_agent.liked_Tweets, this_agent.feed[i])
@@ -108,13 +117,15 @@ function like(agent_list::AbstractArray, agent::Integer, opinion_thresh::Abstrac
         else
             break
         end
-
         i += 1
         inclin_interact -= 1
     end
 end
 
-function drop_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.5)
+function drop_input!(
+    graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, 
+    opinion_thresh::AbstractFloat=0.5
+)
     this_agent = agent_list[agent]
     # look for current input tweets that have too different opinion compared to own
     # and remove them if source agent opinion is also too different
@@ -127,13 +138,15 @@ function drop_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Int
     end
 end
 
-function add_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, new_input_count::Integer=4)
+function add_input!(
+    graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, 
+    new_input_count::Integer=4
+)
     # neighbors of neighbors
     input_candidates = Integer[]
     for neighbor in inneighbors(graph, agent)
         append!(input_candidates, setdiff(inneighbors(graph, neighbor), inneighbors(graph, agent)))
     end
-
     shuffle!(input_candidates)
     # Order neighbors by frequency of occurence in input_candidates descending
     input_queue = first.(sort(collect(countmap(input_candidates)), by=last, rev=true))
@@ -146,7 +159,9 @@ function add_input!(graph::AbstractGraph, agent_list::AbstractArray, agent::Inte
     end
 end
 
-function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, agent::Integer)
+function set_inactive!(
+    graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, tweet_list::AbstractArray
+)
     this_agent = agent_list[agent]
     this_agent.active = false
     agent_edges = [e for e in edges(graph) if (src(e) == agent || dst(e) == agent)]
@@ -162,10 +177,14 @@ function set_inactive!(graph::AbstractGraph, agent_list::AbstractArray, tweet_li
     return true
 end
 
-function retweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, opinion_thresh::AbstractFloat=0.1)
+function retweet!(
+    graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, 
+    opinion_thresh::AbstractFloat=0.1
+)
     this_agent = agent_list[agent]
     for tweet in this_agent.feed
-        if (abs(this_agent.opinion - tweet.opinion) <= opinion_thresh) && !(tweet in this_agent.retweeted_Tweets)
+        if ((abs(this_agent.opinion - tweet.opinion) <= opinion_thresh) 
+            && !(tweet in this_agent.retweeted_Tweets))
             tweet.weight *= 1.01
             tweet.retweet_count += 1
             push!(this_agent.retweeted_Tweets, tweet)
@@ -177,9 +196,12 @@ function retweet!(graph::AbstractGraph, agent_list::AbstractArray, agent::Intege
     end
 end
 
-function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Integer, agent::Integer)
+function publish_tweet!(
+    graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, tweet_list::AbstractArray, 
+    tick_nr::Integer=0
+)
     this_agent = agent_list[agent]
-    tweet_opinion = this_agent.opinion + rand(-0.1:0.0000001:0.1)
+    tweet_opinion = this_agent.opinion + 0.1 * (2 * rand() - 1)
     # upper opinion limit is 1
     if tweet_opinion > 1
         tweet_opinion = 1.0
@@ -195,7 +217,10 @@ function publish_tweet!(graph::AbstractGraph, agent_list::AbstractArray, tweet_l
     end
 end
 
-function update_feed!(graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, decay_factor::AbstractFloat=0.5)
+function update_feed!(
+    graph::AbstractGraph, agent_list::AbstractArray, agent::Integer, 
+    decay_factor::AbstractFloat=0.5
+)
     this_agent = agent_list[agent]
     unique!(this_agent.feed)
     deletedTweets = Integer[]

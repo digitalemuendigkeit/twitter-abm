@@ -1,10 +1,10 @@
 mutable struct Tweet
-    opinion::AbstractFloat
-    weight::AbstractFloat
-    source_agent::Integer
-    published_at::Integer
-    like_count::Integer
-    retweet_count::Integer
+    opinion::Float64
+    weight::Float64
+    source_agent::Int64
+    published_at::Int64
+    like_count::Int64
+    retweet_count::Int64
     function Tweet(opinion, weight, source_agent, published_at)
         # check if opinion value is valid
         if opinion < -1 || opinion > 1
@@ -13,7 +13,14 @@ mutable struct Tweet
         if weight < 0
             error("invalid weight value")
         end
-        new(opinion, weight, source_agent, published_at, 0, 0)
+        new(
+            opinion, 
+            weight, 
+            source_agent, 
+            published_at, 
+            0, 
+            0
+        )
     end
 end
 

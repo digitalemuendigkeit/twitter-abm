@@ -6,7 +6,7 @@ using Distributed
 using Random
 
 function generate_opinion()
-    return rand(-1:0.0000001:1)
+    return 2 * rand() - 1
 end
 
 # this function was adapted from:
@@ -39,14 +39,23 @@ function create_agents(agent_count::Integer)
 end
 
 # simulation step
-function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, tick_nr::Int64, growth::Integer=4, max_inactive_ticks::Integer=2)
+function tick!(
+    graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, 
+    tick_nr::Int64, growth::Integer=4, max_inactive_ticks::Integer=2
+)  
+#= 
+TODO: 
+julia convention changed object first
+always return changed object 
+simplify interface -> use tuple simulation_state = (graph, agent_list)
+squish / splat
+=#
     for agent in shuffle(1:length(agent_list))
         this_agent = agent_list[agent]
-        if rand() < this_agent.check_regularity && this_agent.active
+        if this_agent.active && (rand() < this_agent.check_regularity) 
             update_feed!(graph, agent_list, agent)
             update_perceiv_publ_opinion!(graph, agent_list, agent)
             update_opinion!(agent_list, agent)
-            # update_inclin_interact!(agent_list, agent)
             like(agent_list, agent)
             retweet!(graph, agent_list, agent)
             drop_input!(graph, agent_list, agent)
@@ -54,7 +63,7 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::Abst
             inclin_interact = deepcopy(this_agent.inclin_interact)
             while inclin_interact > 0
                 if rand() < inclin_interact
-                    publish_tweet!(graph, agent_list, tweet_list, tick_nr, agent)
+                    publish_tweet!(graph, agent_list, agent, tweet_list, tick_nr)
                 end
                 inclin_interact -= 1.0
             end
@@ -63,12 +72,12 @@ function tick!(graph::AbstractGraph, agent_list::AbstractArray, tweet_list::Abst
         elseif this_agent.active
             this_agent.inactive_ticks += 1
             if this_agent.inactive_ticks > max_inactive_ticks
-                set_inactive!(graph, agent_list, tweet_list, agent)
+                set_inactive!(graph, agent_list, agent, tweet_list)
             end
         end
     end
     update_network!(graph, agent_list, growth)
-    return graph, agent_list, log_network(graph, agent_list, tick_nr)
+    return log_network(graph, agent_list, tick_nr)
 end
 
 function log_network(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::Int64)
@@ -92,18 +101,21 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integ
     tweet_list = Array{Tweet, 1}(undef, 0)
     graph = deepcopy(graph)
     df = DataFrame(
-        TickNr = Int64[], AgentID = Int64[], 
-        Opinion = Float64[], PerceivPublOpinion = Float64[], 
-        InclinInteract = Float64[], InactiveTicks = Int64[], 
-        Indegree = Float64[], ActiveStatus = Bool[]
+        TickNr = Int64[], 
+        AgentID = Int64[], 
+        Opinion = Float64[], 
+        PerceivPublOpinion = Float64[], 
+        InclinInteract = Float64[], 
+        InactiveTicks = Int64[], 
+        Indegree = Float64[], 
+        ActiveStatus = Bool[]
     )
     for i in 1:n_iter
-        append!(df, tick!(graph, agent_list, tweet_list, i, growth)[3])
+        append!(df, tick!(graph, agent_list, tweet_list, i, growth))
         if i % ceil(n_iter / 10) == 0
             print(".")
         end
     end
-    visualize_opinionspread(df, length(agent_list), n_iter)
     return df, agent_list, tweet_list, graph
 end
 
