@@ -24,8 +24,8 @@ end
 
 function create_agents(graph::AbstractGraph)
     agent_list = Array{Agent, 1}(undef, length(vertices(graph)))
-    for agent in 1:length(agent_list)
-        agent_list[agent] = Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity())
+    for agent_idx in 1:length(agent_list)
+        agent_list[agent_idx] = Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity())
     end
     return agent_list
 end
@@ -42,14 +42,14 @@ end
 function tick!(
     state::Tuple{AbstractGraph, AbstractArray}, tweet_list::AbstractArray,
     tick_nr::Int64, growth::Integer=4, max_inactive_ticks::Integer=2
-)
-#=
-TODO:
-julia convention changed object first
-always return changed object
-simplify interface -> use tuple simulation_state = (graph, agent_list)
-squish / splat
-=#
+    )
+    #=
+    TODO:
+    julia convention changed object first
+    always return changed object
+    simplify interface -> use tuple simulation_state = (graph, agent_list)
+    squish / splat
+    =#
     agent_list = state[2]
     for agent_idx in shuffle(1:length(agent_list))
         this_agent = agent_list[agent_idx]

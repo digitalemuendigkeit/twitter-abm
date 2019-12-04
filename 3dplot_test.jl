@@ -3,13 +3,13 @@ using Plots
 using DelimitedFiles
 
 # load all scripts
-include("Agent.jl")
 include("Tweet.jl")
+include("Agent.jl")
 include("Network.jl")
 include("Simulation.jl")
 
 
-g = create_network(200, 10, 1)
+g = create_network(200, 10)
 a = create_agents(g)
 
 @time result = simulate(g,a,200)

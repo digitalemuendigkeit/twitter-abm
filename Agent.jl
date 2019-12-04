@@ -138,13 +138,21 @@ function drop_input!(
     this_agent = agent_list[agent_idx]
     # look for current input tweets that have too different opinion compared to own
     # and remove them if source agent opinion is also too different
+    unfollow_Candidates = Array{Tuple{Int64, Int64}, 1}()
+
     for tweet in this_agent.feed
         if abs(tweet.opinion - this_agent.opinion) > opinion_thresh
             if abs(agent_list[tweet.source_agent].opinion - this_agent.opinion) > opinion_thresh
-                rem_edge!(graph, tweet.source_agent, agent_idx)
+                # Add agents with higher follower count than own only with certain probability?
+                push!(unfollow_Candidates, (tweet.source_agent,indegree(graph,tweet.source_agent)))
             end
         end
     end
+    sort!(unfollow_Candidates, by=last)
+    for i in 1:min(length(unfollow_Candidates),ceil(Int64, indegree(graph,agent_idx)/20))
+        rem_edge!(graph,unfollow_Candidates[i][1],agent_idx)
+    end
+
     return state
 end
 
@@ -166,7 +174,12 @@ function add_input!(
         new_input_count = length(input_queue)
     end
     for _ in 1:new_input_count
-        add_edge!(graph, popfirst!(input_queue), agent_idx)
+        new_Neighbor = popfirst!(input_queue)
+        add_edge!(graph, new_Neighbor, agent_idx)
+        if (abs(agent_list[agent_idx].opinion - agent_list[new_Neighbor].opinion) < 0.3
+            && indegree(graph, agent_idx) > indegree(graph, new_Neighbor))
+            add_edge!(graph, agent_idx, new_Neighbor)
+        end
     end
     return state
 end
