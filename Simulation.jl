@@ -40,83 +40,84 @@ end
 
 # simulation step
 function tick!(
-    graph::AbstractGraph, agent_list::AbstractArray, tweet_list::AbstractArray, 
+    state::Tuple{AbstractGraph,AbstractArray}, tweet_list::AbstractArray,
     tick_nr::Int64, growth::Integer=4, max_inactive_ticks::Integer=2
-)  
-#= 
-TODO: 
+)
+#=
+TODO:
 julia convention changed object first
-always return changed object 
+always return changed object
 simplify interface -> use tuple simulation_state = (graph, agent_list)
 squish / splat
 =#
-    for agent in shuffle(1:length(agent_list))
-        this_agent = agent_list[agent]
-        if this_agent.active && (rand() < this_agent.check_regularity) 
-            update_feed!(graph, agent_list, agent)
-            update_perceiv_publ_opinion!(graph, agent_list, agent)
-            update_opinion!(agent_list, agent)
-            like(agent_list, agent)
-            retweet!(graph, agent_list, agent)
-            drop_input!(graph, agent_list, agent)
-            add_input!(graph, agent_list, agent)
+    agent_list = state[2]
+    for agent_idx in shuffle(1:length(agent_list))
+        this_agent = agent_list[agent_idx]
+        if this_agent.active && (rand() < this_agent.check_regularity)
+            update_feed!(state, agent_idx)
+            update_perceiv_publ_opinion!(state, agent_idx)
+            update_opinion!(state, agent_idx)
+            like(state, agent_idx)
+            retweet!(state, agent_idx)
+            drop_input!(state, agent_idx)
+            add_input!(state, agent_idx)
             inclin_interact = deepcopy(this_agent.inclin_interact)
             while inclin_interact > 0
                 if rand() < inclin_interact
-                    publish_tweet!(graph, agent_list, agent, tweet_list, tick_nr)
+                    publish_tweet!(state, tweet_list, agent_idx, tick_nr)
                 end
                 inclin_interact -= 1.0
             end
-            update_check_regularity!(agent_list, agent)
+            update_check_regularity!(state, agent_idx)
             this_agent.inactive_ticks = 0
         elseif this_agent.active
             this_agent.inactive_ticks += 1
             if this_agent.inactive_ticks > max_inactive_ticks
-                set_inactive!(graph, agent_list, agent, tweet_list)
+                set_inactive!(state, agent_idx, tweet_list)
             end
         end
     end
-    update_network!(graph, agent_list, growth)
-    return log_network(graph, agent_list, tick_nr)
+    update_network!(state, growth)
+    return log_network(state, tick_nr)
 end
 
-function log_network(graph::AbstractGraph, agent_list::AbstractArray, tick_nr::Int64)
+function log_network(state::Tuple{AbstractGraph,AbstractArray}, tick_nr::Int64)
+    graph, agent_list = state
     agent_opinion = [a.opinion for a in agent_list]
     agent_perceiv_publ_opinion = [a.perceiv_publ_opinion for a in agent_list]
     agent_inclin_interact = [a.inclin_interact for a in agent_list]
     agent_inactive_ticks = [a.inactive_ticks for a in agent_list]
-    agent_active_status = [a.active for a in agent_list]
+    agent_active_state = [a.active for a in agent_list]
     agent_indegree = indegree(graph)
     return DataFrame(
         TickNr = tick_nr, AgentID = 1:length(agent_list),
         Opinion = agent_opinion, PerceivPublOpinion = agent_perceiv_publ_opinion,
         InclinInteract = agent_inclin_interact, InactiveTicks = agent_inactive_ticks,
-        Indegree = agent_indegree, ActiveStatus = agent_active_status
+        Indegree = agent_indegree, Activestate = agent_active_state
     )
 end
 
 # the actual simulation
 function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integer, growth::Integer=4)
-    agent_list = deepcopy(agent_list)
+    state = (deepcopy(graph),deepcopy(agent_list))
     tweet_list = Array{Tweet, 1}(undef, 0)
-    graph = deepcopy(graph)
     df = DataFrame(
-        TickNr = Int64[], 
-        AgentID = Int64[], 
-        Opinion = Float64[], 
-        PerceivPublOpinion = Float64[], 
-        InclinInteract = Float64[], 
-        InactiveTicks = Int64[], 
-        Indegree = Float64[], 
-        ActiveStatus = Bool[]
+        TickNr = Int64[],
+        AgentID = Int64[],
+        Opinion = Float64[],
+        PerceivPublOpinion = Float64[],
+        InclinInteract = Float64[],
+        InactiveTicks = Int64[],
+        Indegree = Float64[],
+        Activestate = Bool[]
     )
     for i in 1:n_iter
-        append!(df, tick!(graph, agent_list, tweet_list, i, growth))
+        append!(df, tick!(state, tweet_list, i, growth))
         if i % ceil(n_iter / 10) == 0
             print(".")
         end
     end
-    return df, agent_list, tweet_list, graph
+    return df, state, tweet_list
 end
 
 function visualize_opinionspread(df::DataFrame, agentcount::Integer, iterations::Integer)
@@ -141,7 +142,7 @@ function visualize_opinionspread(df::DataFrame, agentcount::Integer, iterations:
 
     for (i in 1:max(df$TickNr)){
         df %>%
-            filter(df$TickNr == i, df$ActiveStatus) %>%
+            filter(df$TickNr == i, df$Activestate) %>%
             .[,3] %>%
             round(digits=1) %>%
             table() %>%

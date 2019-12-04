@@ -33,9 +33,10 @@ end
 
 
 function update_network!(
-    graph::AbstractGraph, agent_list::AbstractArray, 
+    state::Tuple{AbstractGraph,AbstractArray},
     new_agent_count::Integer=4, initial_inputs::Integer=4
 )
+    graph, agent_list = state
     pref_attach_list = [src(e) for e in edges(graph) if agent_list[src(e)].active]
     for _ in 1:new_agent_count
         push!(agent_list, Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity()))
