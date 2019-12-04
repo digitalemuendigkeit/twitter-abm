@@ -40,7 +40,7 @@ end
 
 # simulation step
 function tick!(
-    state::Tuple{AbstractGraph,AbstractArray}, tweet_list::AbstractArray,
+    state::Tuple{AbstractGraph, AbstractArray}, tweet_list::AbstractArray,
     tick_nr::Int64, growth::Integer=4, max_inactive_ticks::Integer=2
 )
 #=
@@ -81,7 +81,7 @@ squish / splat
     return log_network(state, tick_nr)
 end
 
-function log_network(state::Tuple{AbstractGraph,AbstractArray}, tick_nr::Int64)
+function log_network(state::Tuple{AbstractGraph, AbstractArray}, tick_nr::Int64)
     graph, agent_list = state
     agent_opinion = [a.opinion for a in agent_list]
     agent_perceiv_publ_opinion = [a.perceiv_publ_opinion for a in agent_list]
@@ -90,16 +90,20 @@ function log_network(state::Tuple{AbstractGraph,AbstractArray}, tick_nr::Int64)
     agent_active_state = [a.active for a in agent_list]
     agent_indegree = indegree(graph)
     return DataFrame(
-        TickNr = tick_nr, AgentID = 1:length(agent_list),
-        Opinion = agent_opinion, PerceivPublOpinion = agent_perceiv_publ_opinion,
-        InclinInteract = agent_inclin_interact, InactiveTicks = agent_inactive_ticks,
-        Indegree = agent_indegree, Activestate = agent_active_state
+        TickNr = tick_nr, 
+        AgentID = 1:length(agent_list),
+        Opinion = agent_opinion, 
+        PerceivPublOpinion = agent_perceiv_publ_opinion,
+        InclinInteract = agent_inclin_interact, 
+        InactiveTicks = agent_inactive_ticks,
+        Indegree = agent_indegree, 
+        ActiveState = agent_active_state
     )
 end
 
 # the actual simulation
 function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integer, growth::Integer=4)
-    state = (deepcopy(graph),deepcopy(agent_list))
+    state = (deepcopy(graph), deepcopy(agent_list))
     tweet_list = Array{Tweet, 1}(undef, 0)
     df = DataFrame(
         TickNr = Int64[],
@@ -109,7 +113,7 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, n_iter::Integ
         InclinInteract = Float64[],
         InactiveTicks = Int64[],
         Indegree = Float64[],
-        Activestate = Bool[]
+        ActiveState = Bool[]
     )
     for i in 1:n_iter
         append!(df, tick!(state, tweet_list, i, growth))

@@ -36,7 +36,7 @@ mutable struct Agent
 end
 
 function update_perceiv_publ_opinion!(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer
 )
     graph, agent_list = state
     this_agent = agent_list[agent_idx]
@@ -64,7 +64,7 @@ function update_perceiv_publ_opinion!(
 end
 
 function update_opinion!(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer,
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
     opinion_thresh::AbstractFloat=0.3, base_weight::AbstractFloat=0.99
 )
     agent_list = state[2]
@@ -92,7 +92,7 @@ function update_opinion!(
 end
 
 function update_check_regularity!(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer,
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
     opinion_thresh::AbstractFloat=0.3, decrease_factor::AbstractFloat=0.9
 )
     agent_list = state[2]
@@ -106,7 +106,7 @@ function update_check_regularity!(
 end
 
 function like(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer,
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
     opinion_thresh::AbstractFloat=0.2
 )
     agent_list = state[2]
@@ -131,7 +131,7 @@ function like(
 end
 
 function drop_input!(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer,
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
     opinion_thresh::AbstractFloat=0.5
 )
     graph, agent_list = state
@@ -149,7 +149,7 @@ function drop_input!(
 end
 
 function add_input!(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer,
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
     new_input_count::Integer=4
 )
     graph, agent_list = state
@@ -172,7 +172,7 @@ function add_input!(
 end
 
 function set_inactive!(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer, tweet_list::AbstractArray
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer, tweet_list::AbstractArray
 )
     graph, agent_list = state
     this_agent = agent_list[agent_idx]
@@ -191,7 +191,7 @@ function set_inactive!(
 end
 
 function retweet!(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer,
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
     opinion_thresh::AbstractFloat=0.1
 )
     graph, agent_list = state
@@ -212,7 +212,7 @@ function retweet!(
 end
 
 function publish_tweet!(
-    state::Tuple{AbstractGraph,AbstractArray}, tweet_list::AbstractArray, agent_idx::Integer,
+    state::Tuple{AbstractGraph, AbstractArray}, tweet_list::AbstractArray, agent_idx::Integer,
     tick_nr::Integer=0
 )
     graph, agent_list = state
@@ -235,21 +235,21 @@ function publish_tweet!(
 end
 
 function update_feed!(
-    state::Tuple{AbstractGraph,AbstractArray}, agent_idx::Integer,
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
     decay_factor::AbstractFloat=0.5
 )
     graph, agent_list = state
     this_agent = agent_list[agent_idx]
     unique!(this_agent.feed)
-    deletedTweets = Integer[]
-    for (index,tweet) in enumerate(this_agent.feed)
+    deleted_tweets = Integer[]
+    for (index, tweet) in enumerate(this_agent.feed)
         if tweet.weight == -1 || !(tweet.source_agent in inneighbors(graph, agent_idx))
-            push!(deletedTweets,index)
+            push!(deleted_tweets, index)
         else
             tweet.weight = decay_factor * tweet.weight
         end
     end
-    deleteat!(this_agent.feed,deletedTweets)
+    deleteat!(this_agent.feed, deleted_tweets)
     sort!(this_agent.feed, lt=<, rev=true)
     if length(this_agent.feed) > 10
         this_agent.feed = this_agent.feed[1:10]

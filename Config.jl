@@ -52,25 +52,3 @@ struct Config
         )
     end
 end
-
-c = Config()
-
-d = Config(
-    agent_count=100, 
-    network_m0=15,  
-    network_growth_rate=4, 
-    simulation_n_iter=100, 
-    max_inactive_ticks=2, 
-    opinion_backfire_thresh=0.5, 
-    own_opinion_weight=0.9, 
-    check_unease_thresh=0.5, 
-    check_decrease_factor=0.5, 
-    like_opinion_thresh=0.3, 
-    unfollow_opinion_thresh=0.4, 
-    n_new_follows=4, 
-    retweet_opinion_thresh=0.5, 
-    tweet_decay_factor=0.5, 
-    inclin_interact_lambda=0.5
-)
-
-d

@@ -139,8 +139,10 @@ Random.seed!(2)
 g = create_network(200, 15)
 a = create_agents(g)
 
-@time df, agent_list, tweet_list, graph = simulate(g, a, 1000);
+@time df, (graph, agent_list), tweet_list = simulate(g, a, 100);
 
 using CSV
 
 CSV.write("bla3.csv", df)
+
+include("Config.jl")

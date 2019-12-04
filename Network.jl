@@ -33,7 +33,7 @@ end
 
 
 function update_network!(
-    state::Tuple{AbstractGraph,AbstractArray},
+    state::Tuple{AbstractGraph, AbstractArray},
     new_agent_count::Integer=4, initial_inputs::Integer=4
 )
     graph, agent_list = state
