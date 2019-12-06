@@ -65,22 +65,22 @@ end
 
 function update_opinion!(
     state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
-    opinion_thresh::AbstractFloat=0.3, base_weight::AbstractFloat=0.99
+    config::Config
 )
     agent_list = state[2]
     this_agent = agent_list[agent_idx]
     # weighted mean of own opinion and perceived public opinion
-    if (abs(this_agent.opinion - this_agent.perceiv_publ_opinion) < opinion_thresh)
+    if (abs(this_agent.opinion - this_agent.perceiv_publ_opinion) < config.opinion_treshs.backfire)
         this_agent.opinion = (
-            base_weight * this_agent.opinion
-            + (1 - base_weight) * this_agent.perceiv_publ_opinion
+            config.agent_props.own_opinion_weight * this_agent.opinion
+            + (1 - config.agent_props.own_opinion_weight) * this_agent.perceiv_publ_opinion
         )
     else
         if ((this_agent.opinion * this_agent.perceiv_publ_opinion > 0)
             && (abs(this_agent.opinion) - abs(this_agent.perceiv_publ_opinion) < 0))
-            this_agent.opinion = base_weight * this_agent.opinion
+            this_agent.opinion = config.agent_props.own_opinion_weight * this_agent.opinion
         else
-            this_agent.opinion = (2 - base_weight) * this_agent.opinion
+            this_agent.opinion = (2 - config.agent_props.own_opinion_weight) * this_agent.opinion
         end
         if this_agent.opinion > 1
             this_agent.opinion = 1
@@ -93,12 +93,12 @@ end
 
 function update_check_regularity!(
     state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
-    opinion_thresh::AbstractFloat=0.3, decrease_factor::AbstractFloat=0.9
+    config::Config
 )
     agent_list = state[2]
     this_agent = agent_list[agent_idx]
-    if (abs(this_agent.opinion - this_agent.perceiv_publ_opinion) > opinion_thresh)
-        this_agent.check_regularity = decrease_factor * this_agent.check_regularity
+    if (abs(this_agent.opinion - this_agent.perceiv_publ_opinion) > config.opinion_treshs.check_unease)
+        this_agent.check_regularity = config.agent_props.check_decrease * this_agent.check_regularity
     else
         this_agent.check_regularity = 1.0
     end
@@ -107,7 +107,7 @@ end
 
 function like(
     state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
-    opinion_thresh::AbstractFloat=0.2
+    config::Config
 )
     agent_list = state[2]
     this_agent = agent_list[agent_idx]
@@ -115,7 +115,7 @@ function like(
     i = 1
     while inclin_interact > rand()
         if i < length(this_agent.feed)
-            if ((abs(this_agent.feed[i].opinion - this_agent.opinion) < opinion_thresh)
+            if ((abs(this_agent.feed[i].opinion - this_agent.opinion) < config.opinion_treshs.like)
                 && !(this_agent.feed[i] in this_agent.liked_Tweets))
                 this_agent.feed[i].like_count += 1
                 this_agent.feed[i].weight *= 1.01
@@ -132,7 +132,7 @@ end
 
 function drop_input!(
     state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
-    opinion_thresh::AbstractFloat=0.5
+    config::Config
 )
     graph, agent_list = state
     this_agent = agent_list[agent_idx]
@@ -141,10 +141,14 @@ function drop_input!(
     unfollow_Candidates = Array{Tuple{Int64, Int64}, 1}()
 
     for tweet in this_agent.feed
-        if abs(tweet.opinion - this_agent.opinion) > opinion_thresh
-            if abs(agent_list[tweet.source_agent].opinion - this_agent.opinion) > opinion_thresh
+        if abs(tweet.opinion - this_agent.opinion) > config.opinion_treshs.unfollow
+            if abs(agent_list[tweet.source_agent].opinion - this_agent.opinion) > config.opinion_treshs.unfollow
                 # Add agents with higher follower count than own only with certain probability?
-                push!(unfollow_Candidates, (tweet.source_agent,indegree(graph,tweet.source_agent)))
+                if (indegree(graph, tweet.source_agent) / indegree(graph, agent_idx) > 1 && rand() > 0.5)
+                    push!(unfollow_Candidates, (tweet.source_agent,indegree(graph,tweet.source_agent)))
+                elseif (indegree(graph, tweet.source_agent) / indegree(graph, agent_idx) <= 1)
+                    push!(unfollow_Candidates, (tweet.source_agent,indegree(graph,tweet.source_agent)))
+                end
             end
         end
     end
@@ -158,7 +162,7 @@ end
 
 function add_input!(
     state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
-    new_input_count::Integer=4
+    config::Config
 )
     graph, agent_list = state
     # neighbors of neighbors
@@ -170,8 +174,10 @@ function add_input!(
     # Order neighbors by frequency of occurence in input_candidates descending
     input_queue = first.(sort(collect(countmap(input_candidates)), by=last, rev=true))
     # add edges
-    if (length(input_queue) - new_input_count) < 0
+    if (length(input_queue) - config.network.new_follows) < 0
         new_input_count = length(input_queue)
+    else
+        new_input_count = config.network.new_follows
     end
     for _ in 1:new_input_count
         new_Neighbor = popfirst!(input_queue)
@@ -205,12 +211,12 @@ end
 
 function retweet!(
     state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
-    opinion_thresh::AbstractFloat=0.1
+    config::Config
 )
     graph, agent_list = state
     this_agent = agent_list[agent_idx]
     for tweet in this_agent.feed
-        if ((abs(this_agent.opinion - tweet.opinion) <= opinion_thresh)
+        if ((abs(this_agent.opinion - tweet.opinion) <= config.opinion_treshs.retweet)
             && !(tweet in this_agent.retweeted_Tweets))
             tweet.weight *= 1.01
             tweet.retweet_count += 1
@@ -249,7 +255,7 @@ end
 
 function update_feed!(
     state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
-    decay_factor::AbstractFloat=0.5
+    config::Config
 )
     graph, agent_list = state
     this_agent = agent_list[agent_idx]
@@ -259,7 +265,7 @@ function update_feed!(
         if tweet.weight == -1 || !(tweet.source_agent in inneighbors(graph, agent_idx))
             push!(deleted_tweets, index)
         else
-            tweet.weight = decay_factor * tweet.weight
+            tweet.weight = config.agent_props.tweet_decay * tweet.weight
         end
     end
     deleteat!(this_agent.feed, deleted_tweets)

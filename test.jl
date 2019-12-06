@@ -127,6 +127,7 @@ plot(collect(1:size(result[3],1)),result[3].sd)
 [a.opinion for a in result[2]]
 
 # load all scripts
+include("Config.jl")
 include("Tweet.jl")
 include("Agent.jl")
 include("Network.jl")
@@ -136,13 +137,12 @@ using Random
 
 Random.seed!(2)
 
-g = create_network(200, 15)
+config = Config(network = cfg_net(agent_count=100),agent_props = cfg_ag(tweet_decay=0.3))
+g = create_network(config.network.agent_count,config.network.m0)
 a = create_agents(g)
 
-@time df, (graph, agent_list), tweet_list = simulate(g, a, 100);
+@time df, (graph, agent_list), tweet_list = simulate(g, a, config);
 
 using CSV
 
 CSV.write("bla3.csv", df)
-
-include("Config.jl")

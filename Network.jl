@@ -34,15 +34,15 @@ end
 
 function update_network!(
     state::Tuple{AbstractGraph, AbstractArray},
-    new_agent_count::Integer=4, initial_inputs::Integer=4
+    config::Config
 )
     graph, agent_list = state
     pref_attach_list = [src(e) for e in edges(graph) if agent_list[src(e)].active]
-    for _ in 1:new_agent_count
+    for _ in 1:config.network.growth_rate
         push!(agent_list, Agent(generate_opinion(), generate_inclin_interact(), generate_check_regularity()))
         add_vertex!(graph)
         shuffle!(pref_attach_list)
-        for i in 1:initial_inputs
+        for i in 1:config.network.initial_follows
             add_edge!(graph, nv(graph), pref_attach_list[i])
         end
     end

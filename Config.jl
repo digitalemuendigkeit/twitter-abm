@@ -1,54 +1,27 @@
-struct Config
-    agent_count::Int64  # create_agents => agent_count & create_network => n
-    network_m0::Int64  # create_network => m0
-    network_growth_rate::Int64  # simulate => growth
-    simulation_n_iter::Int64  # simulate => n_iter
-    max_inactive_ticks::Int64  # tick => max_inactive_ticks
-    opinion_backfire_thresh::Float64  # update_opinion => opinion_thresh
-    own_opinion_weight::Float64  # update_opinion => base_weight
-    check_unease_thresh::Float64  # update_check_regularity => opinion_thresh
-    check_decrease_factor::Float64  # update_check_regularity => decrease_factor
-    like_opinion_thresh::Float64  # like => opinion_thresh
-    unfollow_opinion_thresh::Float64  # drop_input => opinion_thresh
-    n_new_follows::Int64  # add_input => new_input_count
-    retweet_opinion_thresh::Float64  # retweet => opinion_thresh
-    tweet_decay_factor::Float64  # update_feed => decay_factor
-    inclin_interact_lambda::Float64  # generate_inclin_interact => lambda
+function cfg_net(;agent_count::Int64=100,m0::Int64=10,growth_rate::Int64=4,new_follows::Int64=4, initial_follows::Int64=4)
+    return (agent_count=agent_count,m0=m0,growth_rate=growth_rate,new_follows=new_follows, initial_follows=initial_follows)
+end
 
-    function Config(
-        ;
-        agent_count=0, 
-        network_m0=0,
-        network_growth_rate=0,
-        simulation_n_iter=0,
-        max_inactive_ticks=0,
-        opinion_backfire_thresh=0.0,
-        own_opinion_weight=0.0,
-        check_unease_thresh=0.0,
-        check_decrease_factor=0.0,
-        like_opinion_thresh=0.0,
-        unfollow_opinion_thresh=0.0,
-        n_new_follows=0,
-        retweet_opinion_thresh=0.0,
-        tweet_decay_factor=0.0,
-        inclin_interact_lambda=0.0
-    )
-        new(
-            agent_count,
-            network_m0, 
-            network_growth_rate,
-            simulation_n_iter,
-            max_inactive_ticks,
-            opinion_backfire_thresh,
-            own_opinion_weight,
-            check_unease_thresh,
-            check_decrease_factor,
-            like_opinion_thresh,
-            unfollow_opinion_thresh,
-            n_new_follows,
-            retweet_opinion_thresh,
-            tweet_decay_factor,
-            inclin_interact_lambda
-        )
+function cfg_sim(;n_iter::Int64=100, max_inactive_ticks::Int64=2)
+    return (n_iter=n_iter,max_inactive_ticks=max_inactive_ticks)
+end
+
+function cfg_ot(;like::Float64 = 0.2, retweet::Float64 = 0.3, backfire::Float64 = 0.4, check_unease::Float64 = 0.5, unfollow::Float64 = 0.4)
+    return (like=like,retweet=retweet,backfire=backfire,check_unease=check_unease,unfollow=unfollow)
+end
+
+function cfg_ag(;own_opinion_weight::Float64 = 0.95, check_decrease::Float64 = 0.9, inclin_interact_lambda::Float64 = log(25), tweet_decay::Float64 = 0.5)
+    return (own_opinion_weight=own_opinion_weight,check_decrease=check_decrease,inclin_interact_lambda=inclin_interact_lambda,tweet_decay=tweet_decay)
+end
+
+struct Config
+    network::NamedTuple{(:agent_count, :m0, :growth_rate, :new_follows, :initial_follows),NTuple{5,Int64}}
+    simulation::NamedTuple{(:n_iter, :max_inactive_ticks),NTuple{2,Int64}}
+    opinion_treshs::NamedTuple{(:like, :retweet, :backfire, :check_unease, :unfollow),NTuple{5,Float64}}
+    agent_props::NamedTuple{(:own_opinion_weight, :check_decrease, :inclin_interact_lambda, :tweet_decay),NTuple{4,Float64}}
+
+    function Config(;network = cfg_net(), simulation = cfg_sim(), opinion_treshs = cfg_ot(), agent_props = cfg_ag())
+
+        new(network, simulation, opinion_treshs, agent_props)
     end
 end
