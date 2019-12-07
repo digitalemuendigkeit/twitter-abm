@@ -182,7 +182,7 @@ function add_input!(
     for _ in 1:new_input_count
         new_Neighbor = popfirst!(input_queue)
         add_edge!(graph, new_Neighbor, agent_idx)
-        if (abs(agent_list[agent_idx].opinion - agent_list[new_Neighbor].opinion) < 0.3
+        if (abs(agent_list[agent_idx].opinion - agent_list[new_Neighbor].opinion) < config.opinion_treshs.follow
             && indegree(graph, agent_idx) > indegree(graph, new_Neighbor))
             add_edge!(graph, agent_idx, new_Neighbor)
         end
@@ -265,13 +265,13 @@ function update_feed!(
         if tweet.weight == -1 || !(tweet.source_agent in inneighbors(graph, agent_idx))
             push!(deleted_tweets, index)
         else
-            tweet.weight = config.agent_props.tweet_decay * tweet.weight
+            tweet.weight = config.feed_props.tweet_decay * tweet.weight
         end
     end
     deleteat!(this_agent.feed, deleted_tweets)
     sort!(this_agent.feed, lt=<, rev=true)
-    if length(this_agent.feed) > 10
-        this_agent.feed = this_agent.feed[1:10]
+    if length(this_agent.feed) > config.feed_props.feed_size
+        this_agent.feed = this_agent.feed[1:config.feed_props.feed_size]
     end
     return state
 end

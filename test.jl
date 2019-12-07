@@ -137,7 +137,7 @@ using Random
 
 Random.seed!(2)
 
-config = Config(network = cfg_net(agent_count=100),agent_props = cfg_ag(tweet_decay=0.3))
+config = Config(network = cfg_net(agent_count=100), simulation=cfg_sim(n_iter=100))
 g = create_network(config.network.agent_count,config.network.m0)
 a = create_agents(g)
 
