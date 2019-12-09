@@ -130,6 +130,27 @@ function like(
     return state
 end
 
+function retweet!(
+    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
+    config::Config
+)
+    graph, agent_list = state
+    this_agent = agent_list[agent_idx]
+    for tweet in this_agent.feed
+        if ((abs(this_agent.opinion - tweet.opinion) < config.opinion_treshs.retweet)
+            && !(tweet in this_agent.retweeted_Tweets))
+            tweet.weight *= 1.01
+            tweet.retweet_count += 1
+            push!(this_agent.retweeted_Tweets, tweet)
+            for neighbor in outneighbors(graph, agent_idx)
+                push!(agent_list[neighbor].feed, tweet)
+            end
+            break
+        end
+    end
+    return state
+end
+
 function drop_input!(
     state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
     config::Config
@@ -153,7 +174,7 @@ function drop_input!(
         end
     end
     sort!(unfollow_Candidates, by=last)
-    for i in 1:min(length(unfollow_Candidates),ceil(Int64, indegree(graph,agent_idx)/20))
+    for i in 1:min(length(unfollow_Candidates),ceil(Int64, indegree(graph,agent_idx)*config.agent_props.unfollow_rate))
         rem_edge!(graph,unfollow_Candidates[i][1],agent_idx)
     end
 
@@ -204,27 +225,6 @@ function set_inactive!(
     for t in tweet_list
         if t.source_agent == agent_idx
             t.weight = -1
-        end
-    end
-    return state
-end
-
-function retweet!(
-    state::Tuple{AbstractGraph, AbstractArray}, agent_idx::Integer,
-    config::Config
-)
-    graph, agent_list = state
-    this_agent = agent_list[agent_idx]
-    for tweet in this_agent.feed
-        if ((abs(this_agent.opinion - tweet.opinion) <= config.opinion_treshs.retweet)
-            && !(tweet in this_agent.retweeted_Tweets))
-            tweet.weight *= 1.01
-            tweet.retweet_count += 1
-            push!(this_agent.retweeted_Tweets, tweet)
-            for neighbor in outneighbors(graph, agent_idx)
-                push!(agent_list[neighbor].feed, tweet)
-            end
-            break
         end
     end
     return state

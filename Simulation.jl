@@ -43,13 +43,7 @@ function tick!(
     state::Tuple{AbstractGraph, AbstractArray}, tweet_list::AbstractArray,
     tick_nr::Int64, config::Config
     )
-    #=
-    TODO:
-    julia convention changed object first
-    always return changed object
-    simplify interface -> use tuple simulation_state = (graph, agent_list)
-    squish / splat
-    =#
+
     agent_list = state[2]
     for agent_idx in shuffle(1:length(agent_list))
         this_agent = agent_list[agent_idx]
@@ -102,9 +96,12 @@ function log_network(state::Tuple{AbstractGraph, AbstractArray}, tick_nr::Int64)
 end
 
 # the actual simulation
-function simulate(graph::AbstractGraph, agent_list::AbstractArray, config::Config = Config())
-    state = (deepcopy(graph), deepcopy(agent_list))
+function simulate(config::Config = Config())
+    graph = create_network(config.network.agent_count,config.network.m0)
+    init_state = (graph, create_agents(graph))
+    state = deepcopy(init_state)
     tweet_list = Array{Tweet, 1}(undef, 0)
+    graph_list = Array{AbstractGraph, 1}([graph])
     df = DataFrame(
         TickNr = Int64[],
         AgentID = Int64[],
@@ -119,9 +116,20 @@ function simulate(graph::AbstractGraph, agent_list::AbstractArray, config::Confi
         append!(df, tick!(state, tweet_list, i, config))
         if i % ceil(config.simulation.n_iter / 10) == 0
             print(".")
+            push!(graph_list, deepcopy(state[1]))
         end
     end
-    return df, state, tweet_list
+
+    tweet_df = DataFrame(
+                Opinion = [t.opinion for t in tweet_list],
+                Weight = [t.weight for t in tweet_list],
+                Source_Agent = [t.source_agent for t in tweet_list],
+                Published_At = [t.published_at for t in tweet_list],
+                Likes = [t.like_count for t in tweet_list],
+                Retweets = [t.retweet_count for t in tweet_list]
+                )
+
+    return (df, tweet_df, graph_list), state, init_state
 end
 
 function visualize_opinionspread(df::DataFrame, agentcount::Integer, iterations::Integer)

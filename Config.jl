@@ -34,9 +34,9 @@ function cfg_ag(
     own_opinion_weight::Float64 = 0.99,
     check_decrease::Float64 = 0.9,
     inclin_interact_lambda::Float64 = log(25),
-    tweet_decay::Float64 = 0.5
+    unfollow_rate::Float64 = 0.2,
     )
-    return (own_opinion_weight=own_opinion_weight,check_decrease=check_decrease,inclin_interact_lambda=inclin_interact_lambda,tweet_decay=tweet_decay)
+    return (own_opinion_weight=own_opinion_weight,check_decrease=check_decrease,inclin_interact_lambda=inclin_interact_lambda,unfollow_rate=unfollow_rate)
 end
 
 function cfg_feed(
@@ -51,7 +51,7 @@ struct Config
     network::NamedTuple{(:agent_count, :m0, :growth_rate, :new_follows, :initial_follows),NTuple{5,Int64}}
     simulation::NamedTuple{(:n_iter, :max_inactive_ticks),NTuple{2,Int64}}
     opinion_treshs::NamedTuple{(:like, :retweet, :backfire, :check_unease, :follow, :unfollow),NTuple{6,Float64}}
-    agent_props::NamedTuple{(:own_opinion_weight, :check_decrease, :inclin_interact_lambda, :tweet_decay),NTuple{4,Float64}}
+    agent_props::NamedTuple{(:own_opinion_weight, :check_decrease, :inclin_interact_lambda, :unfollow_rate),NTuple{4,Float64}}
     feed_props::NamedTuple{(:feed_size, :tweet_decay), <:Tuple{Int64, Float64}}
 
     function Config(;network = cfg_net(), simulation = cfg_sim(), opinion_treshs = cfg_ot(), agent_props = cfg_ag(), feed_props = cfg_feed())

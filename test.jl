@@ -138,10 +138,29 @@ using Random
 Random.seed!(2)
 
 config = Config(network = cfg_net(agent_count=100), simulation=cfg_sim(n_iter=100))
-g = create_network(config.network.agent_count,config.network.m0)
-a = create_agents(g)
 
-@time df, (graph, agent_list), tweet_list = simulate(g, a, config);
+@time (df, tweet_df, graph_list), state, init_state = simulate(config);
+
+arrtest = Array{Int64,1}([1,2,3])
+
+
+
+
+
+for (index,i) in enumerate(50:50:250)
+    config = Config(simulation = cfg_sim(n_iter = i))
+
+    @time df, (graph, agent_list), tweet_list = simulate(g, a, config);
+end
+
+using GraphIO
+using ParserCombinator
+df
+
+savegraph("mygraph.gml", graph, GraphIO.GML.GMLFormat())
+
+
+[agent for agent in agent_list if agent.active]
 
 using CSV
 
