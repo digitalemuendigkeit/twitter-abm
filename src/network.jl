@@ -1,6 +1,3 @@
-using Random
-using LightGraphs
-
 # this algorithm is modelled after the python networkx implementation:
 # https://github.com/networkx/networkx/blob/master/networkx/generators/random_graphs.py#L655
 function create_network(

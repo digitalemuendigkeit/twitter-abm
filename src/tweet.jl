@@ -14,17 +14,14 @@ mutable struct Tweet
             error("invalid weight value")
         end
         new(
-            opinion, 
-            weight, 
-            source_agent, 
-            published_at, 
-            0, 
+            opinion,
+            weight,
+            source_agent,
+            published_at,
+            0,
             0
         )
     end
 end
 
 Base.:<(x::Tweet, y::Tweet) = x.weight < y.weight
-
-# suppress output of include()
-;
